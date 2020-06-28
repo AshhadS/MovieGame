@@ -1,0 +1,52 @@
+@font-face {
+  font-family: 'Cartoonist';
+  src: url(./fonts/cartoonist/sfcartoonisthand_regular_macroman/SF_Cartoonist_Hand-webfont.woff) format('woff');
+}
+
+@font-face {
+  font-family: 'Baloo';
+  src: url(./fonts/baloo/Baloo-Regular/baloo-regular.woff) format('woff');
+}
+
+@font-face {
+  font-family: 'ComicRelief';
+  src: url(./fonts/comicrelief_regular/ComicRelief-webfont.woff) format('woff');
+}
+
+
+
+body {
+  /*font-family: Cartoonist;*/
+  font-family: ComicRelief;
+  background: #2f3d4c;
+  color: #fff;
+  font-size: 2em;
+}
+
+h1, h2, h3, h4, h5{
+  font-family: Baloo;
+  color: #f28d79
+}
+
+.subtitle {
+  color: #96a3b5;
+}
+
+
+input {
+  font-family: ComicRelief;
+  font-size: 1.25em;
+  background: transparent;
+  outline: none;
+  border: 2px solid #fff;
+  border-radius: 15px;
+  color: #fff;
+  text-align: center;
+  max-width: 85%;
+}
+
+.App {
+  text-align: center;
+}
+
+  
