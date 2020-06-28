@@ -75,7 +75,7 @@ class Main extends Component {
 
     let syn_list = '';
 
-    if(synonyms.length == movie_name.split(" ").length ) {
+    if(synonyms.length === movie_name.split(" ").length ) {
       let built_words = []
       // console.log(synonyms)
       for (var i = 0; i <= synonyms_count - 1; i++) {
@@ -86,7 +86,7 @@ class Main extends Component {
         for (var s = 0; s <= synonyms.length - 1; s++) {
           // console.log(synonyms[s][i])
           built_words[i] += synonyms[s][i]
-          if(s !=  synonyms.length - 1) 
+          if(s !==  synonyms.length - 1) 
             built_words[i] += " | ";
         }
 
