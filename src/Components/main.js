@@ -21,47 +21,25 @@ class Main extends Component {
 
   input_blur=()=> {
     console.log('input_blur')
-    let self = this
 
-    let encoded_name = self.state.movie_name.split(' ');
-    let syns = [];
+    let encoded_name = this.state.movie_name.split(' ');
 
-    encoded_name.forEach(word => {
-      fetch("https://api.datamuse.com/words?ml="+word)
+    Promise.all(encoded_name.map(word => {
+      return fetch("https://api.datamuse.com/words?ml="+word)
         .then(res => res.json())
-        .then(
-          (result) => {
-            let res_words = result.slice(0, 5).map( resp => resp.word)
-
-
-            syns.push(res_words);
-
-            // console.log(syns)
-            // console.log(res_words)
-            // console.log(syns)
-
-            self.setState({"synonyms": syns})
-
-
-            // this.setState({
-            //   isLoaded: true,
-            //   items: result.items
-            // });
-          },
-          // Note: it's important to handle errors here
-          // instead of a catch() block so that we don't swallow
-          // exceptions from actual bugs in components.
-          (error) => {
-            // this.setState({
-            //   isLoaded: true,
-            //   error
-            // });
-          }
-        )
+        .then(result => result.slice(0, 5).map( resp => resp.word))
+    })).then(syns => {
+      this.setState({"synonyms": syns})
+    },
+    // Note: it's important to handle errors here
+    // instead of a catch() block so that we don't swallow
+    // exceptions from actual bugs in components.
+    (error) => {
+      // this.setState({
+      //   isLoaded: true,
+      //   error
+      // });
     })
-
-    // console.log(res_words);
-
   }
 
   input_change=(e)=> {
