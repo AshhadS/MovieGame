@@ -52,12 +52,18 @@ const MOVIE_TITLES = [
   'Alien Romulus',
 ];
 
+const getRandomMovieTitle = (excludedTitle = '') => {
+  const availableTitles = MOVIE_TITLES.filter(title => title !== excludedTitle);
+  return availableTitles[Math.floor(Math.random() * availableTitles.length)] || MOVIE_TITLES[0];
+}
+
 class Main extends Component {
   constructor(props) {
     super(props)
     this.state = {
-      movie_name: "Blade Runner",
+      movie_name: getRandomMovieTitle(),
       synonyms: [],
+      clueMovieName: '',
       synonyms_count: 5,
       isLoading: false,
       statusMessage: 'Type a movie title, then press Enter or tap Search.',
@@ -93,7 +99,7 @@ class Main extends Component {
       return;
     }
 
-    this.setState({ isLoading: true, statusMessage: 'Generating clue words...' });
+    this.setState({ isLoading: true, clueMovieName: movieName, statusMessage: 'Generating clue words...' });
 
     Promise.all(encoded_name.map(word => {
       if (this.state.skip_words.includes(word.toLowerCase())) {
@@ -126,10 +132,16 @@ class Main extends Component {
     this.setState({movie_name: nextMovieName, synonyms: []})
   }
 
+  submitMovieTitle=(movieName = this.state.movie_name)=> {
+    this.generateSynonyms(movieName);
+    this.setState({ movie_name: '' });
+  }
+
   input_key_down=(e)=> {
     if (e.key === 'Enter') {
       e.preventDefault();
-      this.generateSynonyms();
+      e.currentTarget.blur();
+      this.submitMovieTitle(e.currentTarget.value);
     }
   }
 
@@ -231,8 +243,7 @@ class Main extends Component {
   }
 
   randomizeMovie=()=> {
-    const availableTitles = MOVIE_TITLES.filter(title => title !== this.state.movie_name);
-    const randomTitle = availableTitles[Math.floor(Math.random() * availableTitles.length)] || MOVIE_TITLES[0];
+    const randomTitle = getRandomMovieTitle(this.state.movie_name);
     this.setState({ movie_name: randomTitle, synonyms: [] }, () => this.generateSynonyms(randomTitle));
   }
 
@@ -269,10 +280,10 @@ class Main extends Component {
   }
 
   render() {
-    let {synonyms, movie_name, synonyms_count, isLoading, statusMessage, teams, activeTeam, isTimerRunning, secondsRemaining, isScorePopupOpen} = this.state;
+    let {synonyms, movie_name, clueMovieName, synonyms_count, isLoading, statusMessage, teams, activeTeam, isTimerRunning, secondsRemaining, isScorePopupOpen} = this.state;
 
     let syn_list = null;
-    const words = movie_name.split(' ').filter(Boolean);
+    const words = (clueMovieName || movie_name).split(' ').filter(Boolean);
 
     if(synonyms.length === words.length ) {
       const built_words = [];
@@ -316,7 +327,7 @@ class Main extends Component {
                 onChange={e => {this.input_change(e)}}
                 onKeyDown={this.input_key_down}
               />
-              <button type="button" onClick={() => this.generateSynonyms()} disabled={isLoading}>Search</button>
+              <button type="button" onClick={() => this.submitMovieTitle()} disabled={isLoading}>Search</button>
               <button type="button" className="secondary-button" onClick={this.randomizeMovie}>Random</button>
             </div>
           </div>
@@ -343,7 +354,10 @@ class Main extends Component {
               <button type="button" className="secondary-button" onClick={this.stopTimer} disabled={!isTimerRunning}>Pause</button>
               <button type="button" className="secondary-button" onClick={this.resetTimer}>Reset</button>
             </div>
-            <button type="button" className="add-point-button" onClick={() => this.awardPoint()}>Add point</button>
+            <div className="turn-result-actions">
+              <button type="button" className="add-point-button" onClick={() => this.awardPoint()}>Add point</button>
+              <button type="button" className="secondary-button skip-button" onClick={() => this.passTurn()}>Skip</button>
+            </div>
           </div>
         </section>
 
