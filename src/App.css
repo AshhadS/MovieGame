@@ -242,3 +242,110 @@ h1 {
     width: 100%;
   }
 }
+
+.session-panel {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(280px, 0.8fr);
+  gap: 1rem;
+  margin-top: 1.5rem;
+}
+
+.scoreboard {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 1rem;
+}
+
+.team-card,
+.timer-card {
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  border-radius: 28px;
+  background: var(--card);
+  box-shadow: var(--shadow);
+  backdrop-filter: blur(18px);
+}
+
+.team-card {
+  padding: 1.35rem;
+  transition: border-color 160ms ease, transform 160ms ease;
+}
+
+.team-card.is-active {
+  border-color: rgba(255, 204, 102, 0.76);
+  transform: translateY(-2px);
+  background: linear-gradient(160deg, rgba(255, 204, 102, 0.18), rgba(255, 255, 255, 0.12));
+}
+
+.team-card h2 {
+  font-size: clamp(1.5rem, 4vw, 2.5rem);
+}
+
+.score {
+  margin: 0.35rem 0 0.85rem;
+  font-family: Baloo, ComicRelief, system-ui, sans-serif;
+  font-size: clamp(3rem, 8vw, 5.25rem);
+  line-height: 1;
+}
+
+.score-actions,
+.timer-actions,
+.round-actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 0.65rem;
+}
+
+.score-actions .secondary-button {
+  width: 3rem;
+  height: 3rem;
+  padding: 0;
+  border-radius: 50%;
+}
+
+.timer-card {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  padding: 1.35rem;
+}
+
+.timer-display {
+  margin: 0.2rem 0;
+  font-family: Baloo, ComicRelief, system-ui, sans-serif;
+  font-size: clamp(4rem, 12vw, 7rem);
+  line-height: 0.9;
+  color: var(--accent-strong);
+  text-shadow: 0 10px 24px rgba(0, 0, 0, 0.25);
+}
+
+.timer-note {
+  margin: 0 0 1rem;
+  color: var(--muted);
+  font-size: 1rem;
+}
+
+.timer-actions {
+  margin-bottom: 0.75rem;
+}
+
+.secondary-button {
+  color: var(--text);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  background: rgba(255, 255, 255, 0.12);
+  box-shadow: none;
+}
+
+button:disabled {
+  cursor: not-allowed;
+  opacity: 0.5;
+  transform: none;
+  box-shadow: none;
+}
+
+@media (max-width: 860px) {
+  .session-panel,
+  .scoreboard {
+    grid-template-columns: 1fr;
+  }
+}

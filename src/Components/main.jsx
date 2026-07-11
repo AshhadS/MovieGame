@@ -32,9 +32,23 @@ class Main extends Component {
       synonyms_count: 5,
       isLoading: false,
       statusMessage: 'Type a movie title, pick a random one, then tab away to generate clue words.',
+      teams: [
+        { name: 'Team One', score: 0 },
+        { name: 'Team Two', score: 0 },
+      ],
+      activeTeam: 0,
+      roundSeconds: 60,
+      secondsRemaining: 60,
+      isTimerRunning: false,
       skip_words: [
         'in', 'on', 'of', 'where', 'when', 'the', 'a', 'an', 'for', 'to'
       ]
+    }
+  }
+
+  componentWillUnmount() {
+    if (this.timerId) {
+      window.clearInterval(this.timerId);
     }
   }
 
@@ -85,14 +99,87 @@ class Main extends Component {
     this.setState({movie_name: e.target.value, synonyms: []})
   }
 
+  startTimer=()=> {
+    if (this.timerId || this.state.secondsRemaining === 0) {
+      return;
+    }
+
+    this.setState({ isTimerRunning: true });
+    this.timerId = window.setInterval(() => {
+      this.setState(({ secondsRemaining }) => {
+        if (secondsRemaining <= 1) {
+          window.clearInterval(this.timerId);
+          this.timerId = null;
+          return { secondsRemaining: 0, isTimerRunning: false };
+        }
+
+        return { secondsRemaining: secondsRemaining - 1 };
+      });
+    }, 1000);
+  }
+
+  stopTimer=()=> {
+    if (this.timerId) {
+      window.clearInterval(this.timerId);
+      this.timerId = null;
+    }
+
+    this.setState({ isTimerRunning: false });
+  }
+
+  resetTimer=()=> {
+    this.stopTimer();
+    this.setState(({ roundSeconds }) => ({ secondsRemaining: roundSeconds }));
+  }
+
+  switchTeam=()=> {
+    this.setState(({ activeTeam, teams }) => ({ activeTeam: (activeTeam + 1) % teams.length }));
+  }
+
+  updateScore=(teamIndex, amount)=> {
+    this.setState(({ teams }) => ({
+      teams: teams.map((team, index) => {
+        if (index !== teamIndex) {
+          return team;
+        }
+
+        return { ...team, score: Math.max(0, team.score + amount) };
+      })
+    }));
+  }
+
+  resetScores=()=> {
+    this.setState(({ teams }) => ({
+      activeTeam: 0,
+      teams: teams.map(team => ({ ...team, score: 0 }))
+    }));
+  }
+
+  passTurn=()=> {
+    this.switchTeam();
+    this.resetTimer();
+  }
+
+  awardPoint=()=> {
+    this.updateScore(this.state.activeTeam, 1);
+    this.passTurn();
+  }
+
   randomizeMovie=()=> {
     const availableTitles = MOVIE_TITLES.filter(title => title !== this.state.movie_name);
     const randomTitle = availableTitles[Math.floor(Math.random() * availableTitles.length)] || MOVIE_TITLES[0];
     this.setState({ movie_name: randomTitle, synonyms: [] }, () => this.generateSynonyms(randomTitle));
   }
 
+  formatTime = () => {
+    const minutes = Math.floor(this.state.secondsRemaining / 60);
+    const seconds = this.state.secondsRemaining % 60;
+
+    return `${minutes}:${String(seconds).padStart(2, '0')}`;
+  }
+
   render() {
-    let {synonyms, movie_name, synonyms_count, isLoading, statusMessage} = this.state;
+    let {synonyms, movie_name, synonyms_count, isLoading, statusMessage, teams, activeTeam, isTimerRunning, secondsRemaining} = this.state;
 
     let syn_list = null;
     const words = movie_name.split(' ').filter(Boolean);
@@ -137,6 +224,38 @@ class Main extends Component {
           </div>
 
           <p className="subtitle" role="status">{isLoading ? '🎬 ' : '✨ '}{statusMessage}</p>
+        </section>
+
+        <section className="session-panel" aria-label="Pass and play controls">
+          <div className="scoreboard">
+            {teams.map((team, index) => (
+              <article className={`team-card ${activeTeam === index ? 'is-active' : ''}`} key={team.name}>
+                <p className="eyebrow">{activeTeam === index ? 'Guessing now' : 'Next up'}</p>
+                <h2>{team.name}</h2>
+                <p className="score">{team.score}</p>
+                <div className="score-actions">
+                  <button type="button" className="secondary-button" onClick={() => this.updateScore(index, -1)}>-</button>
+                  <button type="button" className="secondary-button" onClick={() => this.updateScore(index, 1)}>+</button>
+                </div>
+              </article>
+            ))}
+          </div>
+
+          <div className="timer-card">
+            <p className="eyebrow">Round timer</p>
+            <p className="timer-display" aria-live="polite">{this.formatTime()}</p>
+            <p className="timer-note">Start when {teams[activeTeam].name} begins guessing.</p>
+            <div className="timer-actions">
+              <button type="button" onClick={this.startTimer} disabled={isTimerRunning || secondsRemaining === 0}>Start guessing</button>
+              <button type="button" className="secondary-button" onClick={this.stopTimer} disabled={!isTimerRunning}>Pause</button>
+              <button type="button" className="secondary-button" onClick={this.resetTimer}>Reset timer</button>
+            </div>
+            <div className="round-actions">
+              <button type="button" onClick={this.awardPoint}>Correct guess + switch</button>
+              <button type="button" className="secondary-button" onClick={this.passTurn}>Pass turn</button>
+              <button type="button" className="secondary-button" onClick={this.resetScores}>Reset scores</button>
+            </div>
+          </div>
         </section>
 
         <section className="clues-panel" aria-labelledby="clues-heading">
