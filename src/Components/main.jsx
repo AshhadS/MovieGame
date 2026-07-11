@@ -31,7 +31,7 @@ class Main extends Component {
       synonyms: [],
       synonyms_count: 5,
       isLoading: false,
-      statusMessage: 'Type a movie title, pick a random one, then tab away to generate clue words.',
+      statusMessage: 'Type a movie title. Clues search after each space, or tap Search.',
       teams: [
         { name: 'Team One', score: 0 },
         { name: 'Team Two', score: 0 },
@@ -40,6 +40,7 @@ class Main extends Component {
       roundSeconds: 60,
       secondsRemaining: 60,
       isTimerRunning: false,
+      isScorePopupOpen: false,
       skip_words: [
         'in', 'on', 'of', 'where', 'when', 'the', 'a', 'an', 'for', 'to'
       ]
@@ -96,7 +97,14 @@ class Main extends Component {
   }
 
   input_change=(e)=> {
-    this.setState({movie_name: e.target.value, synonyms: []})
+    const nextMovieName = e.target.value;
+    const shouldSearchOnSpace = /\s$/.test(nextMovieName) && nextMovieName.trim().length > 0;
+
+    this.setState({movie_name: nextMovieName, synonyms: []}, () => {
+      if (shouldSearchOnSpace) {
+        this.generateSynonyms(nextMovieName);
+      }
+    })
   }
 
   startTimer=()=> {
@@ -165,6 +173,14 @@ class Main extends Component {
     this.passTurn();
   }
 
+  openScorePopup=()=> {
+    this.setState({ isScorePopupOpen: true });
+  }
+
+  closeScorePopup=()=> {
+    this.setState({ isScorePopupOpen: false });
+  }
+
   randomizeMovie=()=> {
     const availableTitles = MOVIE_TITLES.filter(title => title !== this.state.movie_name);
     const randomTitle = availableTitles[Math.floor(Math.random() * availableTitles.length)] || MOVIE_TITLES[0];
@@ -178,8 +194,33 @@ class Main extends Component {
     return `${minutes}:${String(seconds).padStart(2, '0')}`;
   }
 
+  renderScoreControls = () => {
+    const { teams, activeTeam } = this.state;
+
+    return (
+      <div className="scoreboard">
+        {teams.map((team, index) => (
+          <article className={`team-card ${activeTeam === index ? 'is-active' : ''}`} key={team.name}>
+            <p className="eyebrow">{activeTeam === index ? 'Guessing now' : 'Next up'}</p>
+            <h2>{team.name}</h2>
+            <p className="score">{team.score}</p>
+            <div className="score-actions">
+              <button type="button" className="secondary-button" onClick={() => this.updateScore(index, -1)}>-</button>
+              <button type="button" className="secondary-button" onClick={() => this.updateScore(index, 1)}>+</button>
+            </div>
+          </article>
+        ))}
+        <div className="round-actions score-round-actions">
+          <button type="button" onClick={this.awardPoint}>Correct + switch</button>
+          <button type="button" className="secondary-button" onClick={this.passTurn}>Pass turn</button>
+          <button type="button" className="secondary-button" onClick={this.resetScores}>Reset scores</button>
+        </div>
+      </div>
+    );
+  }
+
   render() {
-    let {synonyms, movie_name, synonyms_count, isLoading, statusMessage, teams, activeTeam, isTimerRunning, secondsRemaining} = this.state;
+    let {synonyms, movie_name, synonyms_count, isLoading, statusMessage, teams, activeTeam, isTimerRunning, secondsRemaining, isScorePopupOpen} = this.state;
 
     let syn_list = null;
     const words = movie_name.split(' ').filter(Boolean);
@@ -204,11 +245,15 @@ class Main extends Component {
 
     return (
       <main className="main-wrapper">
-        <section className="hero-card" aria-labelledby="movie-name-heading">
-          <p className="eyebrow">Movie clue party game</p>
-          <h1 id="movie-name-heading">Movie Name Remix</h1>
-          <p className="lede">Turn famous titles into playful synonym clues for a fast guessing round.</p>
+        <header className="top-bar">
+          <div>
+            <p className="eyebrow">Movie clue party game</p>
+            <h1 id="movie-name-heading">Remix</h1>
+          </div>
+          <button type="button" className="secondary-button score-toggle" onClick={this.openScorePopup}>Scores</button>
+        </header>
 
+        <section className="hero-card" aria-labelledby="movie-name-heading">
           <div className="movie-form">
             <label htmlFor="movie-name">Movie title</label>
             <div className="input-row">
@@ -219,52 +264,45 @@ class Main extends Component {
                 onBlur={this.input_blur}
                 onChange={e => {this.input_change(e)}}
               />
-              <button type="button" onClick={this.randomizeMovie}>Random movie</button>
+              <button type="button" onClick={() => this.generateSynonyms()} disabled={isLoading}>Search</button>
+              <button type="button" className="secondary-button" onClick={this.randomizeMovie}>Random</button>
             </div>
           </div>
 
           <p className="subtitle" role="status">{isLoading ? '🎬 ' : '✨ '}{statusMessage}</p>
         </section>
 
-        <section className="session-panel" aria-label="Pass and play controls">
-          <div className="scoreboard">
-            {teams.map((team, index) => (
-              <article className={`team-card ${activeTeam === index ? 'is-active' : ''}`} key={team.name}>
-                <p className="eyebrow">{activeTeam === index ? 'Guessing now' : 'Next up'}</p>
-                <h2>{team.name}</h2>
-                <p className="score">{team.score}</p>
-                <div className="score-actions">
-                  <button type="button" className="secondary-button" onClick={() => this.updateScore(index, -1)}>-</button>
-                  <button type="button" className="secondary-button" onClick={() => this.updateScore(index, 1)}>+</button>
-                </div>
-              </article>
-            ))}
-          </div>
-
-          <div className="timer-card">
-            <p className="eyebrow">Round timer</p>
+        <section className="timer-card compact-timer" aria-label="Round timer">
+          <div>
+            <p className="eyebrow">{teams[activeTeam].name} guessing</p>
             <p className="timer-display" aria-live="polite">{this.formatTime()}</p>
-            <p className="timer-note">Start when {teams[activeTeam].name} begins guessing.</p>
-            <div className="timer-actions">
-              <button type="button" onClick={this.startTimer} disabled={isTimerRunning || secondsRemaining === 0}>Start guessing</button>
-              <button type="button" className="secondary-button" onClick={this.stopTimer} disabled={!isTimerRunning}>Pause</button>
-              <button type="button" className="secondary-button" onClick={this.resetTimer}>Reset timer</button>
-            </div>
-            <div className="round-actions">
-              <button type="button" onClick={this.awardPoint}>Correct guess + switch</button>
-              <button type="button" className="secondary-button" onClick={this.passTurn}>Pass turn</button>
-              <button type="button" className="secondary-button" onClick={this.resetScores}>Reset scores</button>
-            </div>
+          </div>
+          <div className="timer-actions">
+            <button type="button" onClick={this.startTimer} disabled={isTimerRunning || secondsRemaining === 0}>Start</button>
+            <button type="button" className="secondary-button" onClick={this.stopTimer} disabled={!isTimerRunning}>Pause</button>
+            <button type="button" className="secondary-button" onClick={this.resetTimer}>Reset</button>
           </div>
         </section>
 
         <section className="clues-panel" aria-labelledby="clues-heading">
           <div className="section-heading">
             <p className="eyebrow">Play words</p>
-            <h2 id="clues-heading">Clue board</h2>
+            <h2 id="clues-heading">Clues</h2>
           </div>
           {syn_list ? <ul className="clue-list">{syn_list}</ul> : <p className="empty-state">Your generated clues will appear here.</p>}
         </section>
+
+        {isScorePopupOpen && (
+          <div className="score-modal-backdrop" role="presentation" onClick={this.closeScorePopup}>
+            <section className="score-modal" role="dialog" aria-modal="true" aria-labelledby="score-heading" onClick={event => event.stopPropagation()}>
+              <div className="modal-header">
+                <h2 id="score-heading">Scores</h2>
+                <button type="button" className="secondary-button close-button" onClick={this.closeScorePopup}>Close</button>
+              </div>
+              {this.renderScoreControls()}
+            </section>
+          </div>
+        )}
       </main>
     )
   }
