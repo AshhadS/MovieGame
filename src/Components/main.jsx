@@ -21,6 +21,35 @@ const MOVIE_TITLES = [
   'Ratatouille',
   'No Country for Old Men',
   'The Dark Knight',
+  'Oppenheimer',
+  'Barbie',
+  'Dune Part Two',
+  'Inside Out 2',
+  'Deadpool and Wolverine',
+  'Wicked',
+  'The Substance',
+  'Anora',
+  'Challengers',
+  'Godzilla Minus One',
+  'Past Lives',
+  'Poor Things',
+  'The Holdovers',
+  'Killers of the Flower Moon',
+  'Top Gun Maverick',
+  'Spider Man Across the Spider Verse',
+  'Avatar The Way of Water',
+  'The Batman',
+  'A Quiet Place Day One',
+  'Kingdom of the Planet of the Apes',
+  'Furiosa A Mad Max Saga',
+  'The Fall Guy',
+  'Civil War',
+  'Longlegs',
+  'The Wild Robot',
+  'Flow',
+  'Conclave',
+  'Nosferatu',
+  'Alien Romulus',
 ];
 
 class Main extends Component {
@@ -31,14 +60,14 @@ class Main extends Component {
       synonyms: [],
       synonyms_count: 5,
       isLoading: false,
-      statusMessage: 'Type a movie title. Clues search after each space, or tap Search.',
+      statusMessage: 'Type a movie title, then press Enter or tap Search.',
       teams: [
         { name: 'Team One', score: 0 },
         { name: 'Team Two', score: 0 },
       ],
       activeTeam: 0,
-      roundSeconds: 60,
-      secondsRemaining: 60,
+      roundSeconds: 120,
+      secondsRemaining: 120,
       isTimerRunning: false,
       isScorePopupOpen: false,
       skip_words: [
@@ -92,19 +121,16 @@ class Main extends Component {
     })
   }
 
-  input_blur=()=> {
-    this.generateSynonyms();
-  }
-
   input_change=(e)=> {
     const nextMovieName = e.target.value;
-    const shouldSearchOnSpace = /\s$/.test(nextMovieName) && nextMovieName.trim().length > 0;
+    this.setState({movie_name: nextMovieName, synonyms: []})
+  }
 
-    this.setState({movie_name: nextMovieName, synonyms: []}, () => {
-      if (shouldSearchOnSpace) {
-        this.generateSynonyms(nextMovieName);
-      }
-    })
+  input_key_down=(e)=> {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      this.generateSynonyms();
+    }
   }
 
   startTimer=()=> {
@@ -144,8 +170,9 @@ class Main extends Component {
     this.setState(({ activeTeam, teams }) => ({ activeTeam: (activeTeam + 1) % teams.length }));
   }
 
-  updateScore=(teamIndex, amount)=> {
-    this.setState(({ teams }) => ({
+  updateScore=(teamIndex, amount, closePopup = false)=> {
+    this.setState(({ teams, isScorePopupOpen }) => ({
+      isScorePopupOpen: closePopup ? false : isScorePopupOpen,
       teams: teams.map((team, index) => {
         if (index !== teamIndex) {
           return team;
@@ -156,21 +183,43 @@ class Main extends Component {
     }));
   }
 
-  resetScores=()=> {
-    this.setState(({ teams }) => ({
+  resetScores=(closePopup = false)=> {
+    this.setState(({ teams, isScorePopupOpen }) => ({
       activeTeam: 0,
+      isScorePopupOpen: closePopup ? false : isScorePopupOpen,
       teams: teams.map(team => ({ ...team, score: 0 }))
     }));
   }
 
-  passTurn=()=> {
-    this.switchTeam();
-    this.resetTimer();
+  passTurn=(closePopup = false)=> {
+    if (this.timerId) {
+      window.clearInterval(this.timerId);
+      this.timerId = null;
+    }
+
+    this.setState(({ activeTeam, teams, roundSeconds, isScorePopupOpen }) => ({
+      activeTeam: (activeTeam + 1) % teams.length,
+      secondsRemaining: roundSeconds,
+      isTimerRunning: false,
+      isScorePopupOpen: closePopup ? false : isScorePopupOpen,
+    }));
   }
 
-  awardPoint=()=> {
-    this.updateScore(this.state.activeTeam, 1);
-    this.passTurn();
+  awardPoint=(closePopup = false)=> {
+    if (this.timerId) {
+      window.clearInterval(this.timerId);
+      this.timerId = null;
+    }
+
+    this.setState(({ activeTeam, teams, roundSeconds, isScorePopupOpen }) => ({
+      activeTeam: (activeTeam + 1) % teams.length,
+      secondsRemaining: roundSeconds,
+      isTimerRunning: false,
+      isScorePopupOpen: closePopup ? false : isScorePopupOpen,
+      teams: teams.map((team, index) => (
+        index === activeTeam ? { ...team, score: team.score + 1 } : team
+      )),
+    }));
   }
 
   openScorePopup=()=> {
@@ -205,15 +254,15 @@ class Main extends Component {
             <h2>{team.name}</h2>
             <p className="score">{team.score}</p>
             <div className="score-actions">
-              <button type="button" className="secondary-button" onClick={() => this.updateScore(index, -1)}>-</button>
-              <button type="button" className="secondary-button" onClick={() => this.updateScore(index, 1)}>+</button>
+              <button type="button" className="secondary-button" onClick={() => this.updateScore(index, -1, true)}>-</button>
+              <button type="button" className="secondary-button" onClick={() => this.updateScore(index, 1, true)}>+</button>
             </div>
           </article>
         ))}
         <div className="round-actions score-round-actions">
-          <button type="button" onClick={this.awardPoint}>Correct + switch</button>
-          <button type="button" className="secondary-button" onClick={this.passTurn}>Pass turn</button>
-          <button type="button" className="secondary-button" onClick={this.resetScores}>Reset scores</button>
+          <button type="button" onClick={() => this.awardPoint(true)}>Add point</button>
+          <button type="button" className="secondary-button" onClick={() => this.passTurn(true)}>Skip</button>
+          <button type="button" className="secondary-button" onClick={() => this.resetScores(true)}>Reset scores</button>
         </div>
       </div>
     );
@@ -250,7 +299,10 @@ class Main extends Component {
             <p className="eyebrow">Movie clue party game</p>
             <h1 id="movie-name-heading">Remix</h1>
           </div>
-          <button type="button" className="secondary-button score-toggle" onClick={this.openScorePopup}>Scores</button>
+          <div className="top-status" aria-label="Game status">
+            <span className="turn-pill">Turn {activeTeam + 1}</span>
+            <button type="button" className="secondary-button score-toggle" onClick={this.openScorePopup}>{teams.map(team => team.score).join(' - ')}</button>
+          </div>
         </header>
 
         <section className="hero-card" aria-labelledby="movie-name-heading">
@@ -261,8 +313,8 @@ class Main extends Component {
                 id="movie-name"
                 name="movie_name"
                 value={this.state.movie_name}
-                onBlur={this.input_blur}
                 onChange={e => {this.input_change(e)}}
+                onKeyDown={this.input_key_down}
               />
               <button type="button" onClick={() => this.generateSynonyms()} disabled={isLoading}>Search</button>
               <button type="button" className="secondary-button" onClick={this.randomizeMovie}>Random</button>
@@ -272,24 +324,27 @@ class Main extends Component {
           <p className="subtitle" role="status">{isLoading ? '🎬 ' : '✨ '}{statusMessage}</p>
         </section>
 
-        <section className="timer-card compact-timer" aria-label="Round timer">
-          <div>
-            <p className="eyebrow">{teams[activeTeam].name} guessing</p>
-            <p className="timer-display" aria-live="polite">{this.formatTime()}</p>
-          </div>
-          <div className="timer-actions">
-            <button type="button" onClick={this.startTimer} disabled={isTimerRunning || secondsRemaining === 0}>Start</button>
-            <button type="button" className="secondary-button" onClick={this.stopTimer} disabled={!isTimerRunning}>Pause</button>
-            <button type="button" className="secondary-button" onClick={this.resetTimer}>Reset</button>
-          </div>
-        </section>
-
         <section className="clues-panel" aria-labelledby="clues-heading">
           <div className="section-heading">
             <p className="eyebrow">Play words</p>
             <h2 id="clues-heading">Clues</h2>
           </div>
           {syn_list ? <ul className="clue-list">{syn_list}</ul> : <p className="empty-state">Your generated clues will appear here.</p>}
+        </section>
+
+        <section className="timer-card compact-timer" aria-label="Round timer">
+          <div>
+            <p className="eyebrow">{teams[activeTeam].name} guessing</p>
+            <p className="timer-display" aria-live="polite">{this.formatTime()}</p>
+          </div>
+          <div className="timer-controls">
+            <div className="timer-actions">
+              <button type="button" onClick={this.startTimer} disabled={isTimerRunning || secondsRemaining === 0}>Start</button>
+              <button type="button" className="secondary-button" onClick={this.stopTimer} disabled={!isTimerRunning}>Pause</button>
+              <button type="button" className="secondary-button" onClick={this.resetTimer}>Reset</button>
+            </div>
+            <button type="button" className="add-point-button" onClick={() => this.awardPoint()}>Add point</button>
+          </div>
         </section>
 
         {isScorePopupOpen && (
