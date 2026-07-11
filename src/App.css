@@ -256,7 +256,15 @@ button:disabled {
   justify-items: end;
 }
 
-.add-point-button {
+.turn-result-actions {
+  display: grid;
+  width: 100%;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.45rem;
+}
+
+.add-point-button,
+.skip-button {
   width: 100%;
 }
 
@@ -412,7 +420,8 @@ button:disabled {
   }
 
   .timer-actions button,
-  .add-point-button {
+  .add-point-button,
+  .skip-button {
     flex: 1 1 auto;
   }
 
