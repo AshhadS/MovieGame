@@ -7,7 +7,7 @@ Movie Game is a small React app that generates wordplay ideas from a movie title
 - React 19
 - Vite
 - Node.js 24
-- Netlify static hosting with Netlify Functions
+- GitHub Pages static hosting
 
 ## Local development
 
@@ -16,7 +16,7 @@ npm install
 npm run dev
 ```
 
-The app runs through Vite. Netlify deploys the built static app from `dist`.
+The app runs through Vite. GitHub Actions deploys the built static app from `dist` to GitHub Pages.
 
 ## Build
 
@@ -30,16 +30,31 @@ npm run build
 npm test
 ```
 
-## Netlify
+## GitHub Pages
 
-Netlify is configured in `netlify.toml` to:
+This project is configured for GitHub Pages with the workflow at `.github/workflows/deploy-pages.yml`.
 
-- use Node.js 24
-- run `npm run build`
-- publish `dist`
-- load functions from `netlify/functions`
+The workflow:
 
-Available functions:
+- runs on pushes to `main` or by manual dispatch
+- uses Node.js 24 and `npm ci`
+- builds with `BASE_PATH=/${GITHUB_REPOSITORY_NAME}/` so Vite assets resolve under the repository path
+- uploads `dist` and deploys it with GitHub Pages Actions
 
-- `/.netlify/functions/hello`
-- `/.netlify/functions/async-dadjoke`
+### Repository configuration required
+
+In GitHub, open **Settings → Pages** and set **Build and deployment → Source** to **GitHub Actions**. After the next successful workflow run, the app will be available at:
+
+```text
+https://<your-github-username>.github.io/<repository-name>/
+```
+
+For this repository name, the default project URL will be:
+
+```text
+https://<your-github-username>.github.io/MovieGame/
+```
+
+If you deploy with a custom domain at the site root, set `BASE_PATH=/` in the workflow build step before running `npm run build`.
+
+> Note: GitHub Pages only hosts static files. The React app calls the public Datamuse API directly, so it works on Pages, but the existing `netlify/functions` examples are not deployed by GitHub Pages.
