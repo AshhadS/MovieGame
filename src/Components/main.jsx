@@ -95,7 +95,7 @@ class Main extends Component {
       .filter(Boolean);
 
     if (encoded_name.length === 0) {
-      this.setState({ synonyms: [], statusMessage: 'Add a movie title to get clue words.' });
+      this.setState({ synonyms: [], clueMovieName: '', statusMessage: 'Add a movie title to get clue words.' });
       return;
     }
 
@@ -129,11 +129,25 @@ class Main extends Component {
 
   input_change=(e)=> {
     const nextMovieName = e.target.value;
-    this.setState({movie_name: nextMovieName, synonyms: []})
+    this.setState({
+      movie_name: nextMovieName,
+      clueMovieName: '',
+      synonyms: [],
+      statusMessage: nextMovieName.trim()
+        ? 'Press Enter or Search to generate clue words for this title.'
+        : 'Type a movie title, then press Enter or tap Search.',
+    })
   }
 
   submitMovieTitle=(movieName = this.state.movie_name)=> {
-    this.generateSynonyms(movieName);
+    const submittedMovieName = movieName.trim();
+
+    if (!submittedMovieName) {
+      this.setState({ synonyms: [], clueMovieName: '', statusMessage: 'Add a movie title to get clue words.' });
+      return;
+    }
+
+    this.generateSynonyms(submittedMovieName);
     this.setState({ movie_name: '' });
   }
 
@@ -243,8 +257,8 @@ class Main extends Component {
   }
 
   randomizeMovie=()=> {
-    const randomTitle = getRandomMovieTitle(this.state.movie_name);
-    this.setState({ movie_name: randomTitle, synonyms: [] }, () => this.generateSynonyms(randomTitle));
+    const randomTitle = getRandomMovieTitle(this.state.movie_name || this.state.clueMovieName);
+    this.setState({ movie_name: randomTitle, clueMovieName: '', synonyms: [] }, () => this.generateSynonyms(randomTitle));
   }
 
   formatTime = () => {
@@ -281,6 +295,7 @@ class Main extends Component {
 
   render() {
     let {synonyms, movie_name, clueMovieName, synonyms_count, isLoading, statusMessage, teams, activeTeam, isTimerRunning, secondsRemaining, isScorePopupOpen} = this.state;
+    const activeTeamName = teams[activeTeam].name;
 
     let syn_list = null;
     const words = (clueMovieName || movie_name).split(' ').filter(Boolean);
@@ -299,7 +314,10 @@ class Main extends Component {
       }
 
       syn_list = built_words.map((word, index) => (
-        <li className="clue-card" key={`${word}-${index}`}>{word}</li>
+        <li className="clue-card" key={`${word}-${index}`}>
+          <span className="clue-number">Set {index + 1}</span>
+          <span className="clue-phrase">{word}</span>
+        </li>
       ));
     }
 
@@ -311,7 +329,7 @@ class Main extends Component {
             <h1 id="movie-name-heading">Remix</h1>
           </div>
           <div className="top-status" aria-label="Game status">
-            <span className="turn-pill">Turn {activeTeam + 1}</span>
+            <span className="turn-pill">{activeTeamName}</span>
             <button type="button" className="secondary-button score-toggle" onClick={this.openScorePopup}>{teams.map(team => team.score).join(' - ')}</button>
           </div>
         </header>
@@ -322,6 +340,7 @@ class Main extends Component {
             <div className="input-row">
               <input type="text"
                 id="movie-name"
+                placeholder="Enter a movie title"
                 name="movie_name"
                 value={this.state.movie_name}
                 onChange={e => {this.input_change(e)}}
@@ -337,15 +356,23 @@ class Main extends Component {
 
         <section className="clues-panel" aria-labelledby="clues-heading">
           <div className="section-heading">
-            <p className="eyebrow">Play words</p>
-            <h2 id="clues-heading">Clues</h2>
+            <div>
+              <p className="eyebrow">Play words</p>
+              <h2 id="clues-heading">Clue sets</h2>
+            </div>
+            {clueMovieName && <p className="clue-title">For <strong>{clueMovieName}</strong></p>}
           </div>
-          {syn_list ? <ul className="clue-list">{syn_list}</ul> : <p className="empty-state">Your generated clues will appear here.</p>}
+          {words.length > 0 && syn_list && (
+            <div className="source-words" aria-label="Movie title words">
+              {words.map((word, index) => <span key={`${word}-${index}`}>{word}</span>)}
+            </div>
+          )}
+          {syn_list ? <ul className="clue-list">{syn_list}</ul> : <p className="empty-state">Start typing a title to clear old clues. Search keeps existing clues visible until the new clue sets are ready.</p>}
         </section>
 
         <section className="timer-card compact-timer" aria-label="Round timer">
           <div>
-            <p className="eyebrow">{teams[activeTeam].name} guessing</p>
+            <p className="eyebrow">{activeTeamName} guessing</p>
             <p className="timer-display" aria-live="polite">{this.formatTime()}</p>
           </div>
           <div className="timer-controls">
