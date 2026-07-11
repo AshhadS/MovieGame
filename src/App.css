@@ -144,6 +144,28 @@ button:disabled {
   font-size: 1.85rem;
 }
 
+.top-status {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 0.45rem;
+}
+
+.turn-pill {
+  display: inline-flex;
+  align-items: center;
+  min-height: 2.4rem;
+  padding: 0.35rem 0.65rem;
+  border: 1px solid rgba(255, 204, 102, 0.34);
+  border-radius: 999px;
+  color: var(--accent-strong);
+  background: rgba(255, 204, 102, 0.12);
+  font-size: 0.78rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
 .hero-card,
 .clues-panel,
 .timer-card,
@@ -228,7 +250,18 @@ button:disabled {
   justify-content: flex-end;
 }
 
-.clues-panel {
+.timer-controls {
+  display: grid;
+  gap: 0.55rem;
+  justify-items: end;
+}
+
+.add-point-button {
+  width: 100%;
+}
+
+.clues-panel,
+.timer-card {
   margin-top: 0.65rem;
 }
 
@@ -354,6 +387,12 @@ button:disabled {
   padding-inline: 0.75rem;
 }
 
+.score-toggle {
+  min-width: 4.4rem;
+  font-family: Baloo, ComicRelief, system-ui, sans-serif;
+  font-size: 1.2rem;
+}
+
 @media (max-width: 430px) {
   .input-row {
     grid-template-columns: 1fr 1fr;
@@ -372,8 +411,13 @@ button:disabled {
     justify-content: stretch;
   }
 
-  .timer-actions button {
+  .timer-actions button,
+  .add-point-button {
     flex: 1 1 auto;
+  }
+
+  .timer-controls {
+    justify-items: stretch;
   }
 }
 
