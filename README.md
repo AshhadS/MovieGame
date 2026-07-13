@@ -30,6 +30,18 @@ Available values:
 
 - `related` (default) preserves the existing behavior by taking Datamuse `ml` results in API order.
 - `datamuse` uses the recommended integration: ranked `rel_syn` results first, followed by an unbiased `ml` fallback when strict synonyms do not provide enough clues.
+- `merriam-webster` uses Merriam-Webster's Collegiate Thesaurus synonym lists and requires `VITE_MERRIAM_WEBSTER_API_KEY`.
+
+To use Merriam-Webster locally, add this to `.env.local`:
+
+```text
+VITE_SYNONYM_PROVIDER=merriam-webster
+VITE_MERRIAM_WEBSTER_API_KEY=<your Collegiate Thesaurus API key>
+```
+
+For GitHub Pages, set the repository variable `VITE_SYNONYM_PROVIDER` to `merriam-webster` and add `MERRIAM_WEBSTER_API_KEY` under **Settings → Secrets and variables → Actions → Secrets**. The workflow maps the secret to the Vite variable during the build.
+
+Like every `VITE_*` value, the Merriam-Webster key is compiled into the static browser bundle and can be inspected by visitors. Keeping it private requires a server-side proxy. Also review Merriam-Webster's non-commercial usage, daily-query, attribution, and branding requirements before deployment.
 
 Restart the Vite development server after changing the value. For a deployed build, set `VITE_SYNONYM_PROVIDER` in the hosting environment before `npm run build`. Because this is a Vite build variable, switching providers requires rebuilding the static site.
 

@@ -36,6 +36,7 @@ jobs:
         env:
           BASE_PATH: /${{ github.event.repository.name }}/
           VITE_SYNONYM_PROVIDER: ${{ vars.VITE_SYNONYM_PROVIDER }}
+          VITE_MERRIAM_WEBSTER_API_KEY: ${{ secrets.MERRIAM_WEBSTER_API_KEY }}
           VITE_TMDB_API_TOKEN: ${{ secrets.TMDB_API_TOKEN }}
           VITE_TMDB_LANGUAGE: ${{ vars.TMDB_LANGUAGE }}
           VITE_TMDB_REGION: ${{ vars.TMDB_REGION }}

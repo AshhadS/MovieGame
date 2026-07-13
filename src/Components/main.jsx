@@ -69,7 +69,7 @@ class Main extends Component {
       clueMovieName: '',
       synonyms_count: 5,
       isLoading: false,
-      statusMessage: 'Type a movie title, then press Enter or tap Search.',
+      statusMessage: 'Enter a Movie Name, then press Enter or tap Search.',
       teams: [
         { name: 'Team One', score: 0 },
         { name: 'Team Two', score: 0 },
@@ -152,7 +152,6 @@ class Main extends Component {
     }
 
     this.generateSynonyms(submittedMovieName);
-    this.setState({ movie_name: '' });
   }
 
   input_key_down=(e)=> {
@@ -350,11 +349,11 @@ class Main extends Component {
 
         <section className="hero-card" aria-labelledby="movie-name-heading">
           <div className="movie-form">
-            <label htmlFor="movie-name">Movie title</label>
+            <label htmlFor="movie-name">Movie Name</label>
             <div className="input-row">
               <input type="text"
                 id="movie-name"
-                placeholder="Enter a movie title"
+                placeholder="Enter a movie name"
                 name="movie_name"
                 value={this.state.movie_name}
                 onChange={e => {this.input_change(e)}}
@@ -381,7 +380,10 @@ class Main extends Component {
               <div className="clue-groups">
                 {words.map((sourceWord, wordIndex) => (
                   <article className="clue-group" key={`${sourceWord}-${wordIndex}`}>
-                    <h3>{sourceWord}</h3>
+                    <h3>
+                      <span className="source-word-number" aria-hidden="true">{wordIndex + 1}.</span>
+                      <span>{sourceWord}</span>
+                    </h3>
                     <div className="clue-options" aria-label={`Clue words for ${sourceWord}`}>
                       {synonyms[wordIndex].map((clue, clueIndex) => {
                         const isSelected = selectedClues[wordIndex]?.includes(clue);

@@ -1,6 +1,7 @@
 const DATAMUSE_URL = 'https://api.datamuse.com/words';
+const MERRIAM_WEBSTER_URL = 'https://www.dictionaryapi.com/api/v3/references/thesaurus/json';
 const DEFAULT_PROVIDER = 'related';
-const SUPPORTED_PROVIDERS = new Set(['related', 'datamuse']);
+const SUPPORTED_PROVIDERS = new Set(['related', 'datamuse', 'merriam-webster']);
 const ABSTRACT_WORDS = new Set([
   'condition', 'process', 'quality', 'relation', 'state', 'status',
 ]);
@@ -88,6 +89,52 @@ const getRankedDatamuseWords = async (word, count) => {
   return [...rankedSynonyms, ...rankedRelated];
 };
 
+const getMerriamWebsterWords = async (word, count) => {
+  const apiKey = import.meta.env.VITE_MERRIAM_WEBSTER_API_KEY?.trim();
+
+  if (!apiKey) {
+    throw new Error('Merriam-Webster is not configured');
+  }
+
+  const response = await fetch(
+    `${MERRIAM_WEBSTER_URL}/${encodeURIComponent(word)}?key=${encodeURIComponent(apiKey)}`,
+  );
+
+  if (!response.ok) {
+    throw new Error(`Merriam-Webster request failed with status ${response.status}`);
+  }
+
+  const entries = await response.json();
+
+  if (!Array.isArray(entries)) {
+    return [];
+  }
+
+  const source = word.toLowerCase();
+  const seen = new Set();
+
+  return entries
+    .flatMap(entry => Array.isArray(entry?.meta?.syns) ? entry.meta.syns.flat(Infinity) : [])
+    .filter(candidate => typeof candidate === 'string')
+    .map(candidate => candidate.trim())
+    .filter(candidate => {
+      const normalized = candidate.toLowerCase();
+      const isUsable = normalized
+        && normalized !== source
+        && !seen.has(normalized)
+        && !normalized.includes(' ')
+        && normalized.length <= 10
+        && !ABSTRACT_WORDS.has(normalized);
+
+      if (isUsable) {
+        seen.add(normalized);
+      }
+
+      return isUsable;
+    })
+    .slice(0, count);
+};
+
 export const getConfiguredSynonymProvider = () => {
   const configuredProvider = import.meta.env.VITE_SYNONYM_PROVIDER?.toLowerCase();
   return SUPPORTED_PROVIDERS.has(configuredProvider)
@@ -100,6 +147,9 @@ export const getClueWords = (word, count, provider = getConfiguredSynonymProvide
     return getRankedDatamuseWords(word, count);
   }
 
+  if (provider === 'merriam-webster') {
+    return getMerriamWebsterWords(word, count);
+  }
+
   return getRelatedWords(word, count);
 };
-

@@ -42,20 +42,26 @@ it('groups clue words and lets the user choose them', async () => {
 
   const searchButton = [...div.querySelectorAll('button')]
     .find(button => button.textContent === 'Search');
+  const movieInput = div.querySelector('#movie-name');
+  const submittedMovieTitle = movieInput.value;
 
   await act(async () => {
     searchButton.dispatchEvent(new MouseEvent('click', { bubbles: true }));
   });
 
+  expect(movieInput.value).toBe(submittedMovieTitle);
   expect(div.querySelectorAll('.clue-group').length).toBeGreaterThan(0);
+  expect(div.querySelector('.source-word-number').textContent).toBe('1.');
   const clueButton = div.querySelector('.clue-option');
+  expect(clueButton.querySelector('.clue-option-number')).toBeNull();
+  const clueLabel = clueButton.textContent;
 
   await act(async () => {
     clueButton.dispatchEvent(new MouseEvent('click', { bubbles: true }));
   });
 
   expect(clueButton.getAttribute('aria-pressed')).toBe('true');
-  expect(div.querySelector('.selected-clue-phrase').textContent).toContain(clueButton.textContent);
+  expect(div.querySelector('.selected-clue-phrase').textContent).toContain(clueLabel);
 
   await act(async () => {
     clueButton.dispatchEvent(new MouseEvent('click', { bubbles: true }));

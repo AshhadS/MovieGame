@@ -8,6 +8,7 @@ const response = body => ({
 
 afterEach(() => {
   vi.restoreAllMocks();
+  vi.unstubAllEnvs();
 });
 
 describe('synonym providers', () => {
@@ -47,5 +48,30 @@ describe('synonym providers', () => {
     expect(fetchMock).toHaveBeenCalledTimes(2);
     expect(fetchMock.mock.calls[1][0]).toContain('ml=jaws');
   });
-});
 
+  it('loads and normalizes Collegiate Thesaurus synonyms', async () => {
+    vi.stubEnv('VITE_MERRIAM_WEBSTER_API_KEY', 'test-key');
+    const fetchMock = vi.spyOn(globalThis, 'fetch').mockResolvedValue(response([
+      {
+        meta: {
+          syns: [
+            ['cry', 'shout', 'belly laugh'],
+            ['yell', 'cry'],
+          ],
+        },
+      },
+    ]));
+
+    await expect(getClueWords('scream', 3, 'merriam-webster'))
+      .resolves.toEqual(['cry', 'shout', 'yell']);
+    expect(fetchMock).toHaveBeenCalledOnce();
+    expect(fetchMock.mock.calls[0][0]).toContain('/references/thesaurus/json/scream?key=test-key');
+  });
+
+  it('requires an API key in Merriam-Webster mode', async () => {
+    vi.stubEnv('VITE_MERRIAM_WEBSTER_API_KEY', '');
+
+    await expect(getClueWords('scream', 3, 'merriam-webster'))
+      .rejects.toThrow('Merriam-Webster is not configured');
+  });
+});
