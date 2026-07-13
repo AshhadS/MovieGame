@@ -33,6 +33,22 @@ Available values:
 
 Restart the Vite development server after changing the value. For a deployed build, set `VITE_SYNONYM_PROVIDER` in the hosting environment before `npm run build`. Because this is a Vite build variable, switching providers requires rebuilding the static site.
 
+## Latest movies from TMDB
+
+The **Random latest** button loads a random title from TMDB's current `movie/now_playing` feed. If TMDB is not configured or cannot be reached, the app automatically uses its built-in movie list.
+
+For local development, add these values to `.env.local`:
+
+```text
+VITE_TMDB_API_TOKEN=<your TMDB API Read Access Token>
+VITE_TMDB_LANGUAGE=en-US
+VITE_TMDB_REGION=US
+```
+
+For GitHub Pages, add `TMDB_API_TOKEN` under **Settings → Secrets and variables → Actions → Secrets**. Optionally add `TMDB_LANGUAGE` and `TMDB_REGION` as repository variables. The Pages workflow maps these values to the Vite build automatically.
+
+GitHub Pages is a static host, so the TMDB read token is compiled into the browser bundle and can be inspected by visitors even when it is stored as a GitHub Actions secret. Use only TMDB's application-level read token here; protecting a credential completely requires routing requests through a server-side function or proxy.
+
 ## Build
 
 ```bash

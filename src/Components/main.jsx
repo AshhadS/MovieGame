@@ -1,5 +1,6 @@
 import React, { Component } from 'react';
 import { getClueWords } from '../services/synonymProviders.js';
+import { getRandomLatestMovie, isTmdbConfigured } from '../services/movieProvider.js';
 
 const MOVIE_TITLES = [
   'Blade Runner',
@@ -259,8 +260,20 @@ class Main extends Component {
     this.setState({ isScorePopupOpen: false });
   }
 
-  randomizeMovie=()=> {
-    const randomTitle = getRandomMovieTitle(this.state.movie_name || this.state.clueMovieName);
+  randomizeMovie=async()=> {
+    const excludedTitle = this.state.movie_name || this.state.clueMovieName;
+    this.setState({ isLoading: true, statusMessage: 'Loading a recent movie...' });
+
+    let randomTitle;
+
+    try {
+      randomTitle = isTmdbConfigured()
+        ? await getRandomLatestMovie(excludedTitle)
+        : getRandomMovieTitle(excludedTitle);
+    } catch {
+      randomTitle = getRandomMovieTitle(excludedTitle);
+    }
+
     this.setState({ movie_name: randomTitle, clueMovieName: '', synonyms: [], selectedClues: [] }, () => this.generateSynonyms(randomTitle));
   }
 
@@ -348,7 +361,7 @@ class Main extends Component {
                 onKeyDown={this.input_key_down}
               />
               <button type="button" onClick={() => this.submitMovieTitle()} disabled={isLoading}>Search</button>
-              <button type="button" className="secondary-button" onClick={this.randomizeMovie}>Random</button>
+              <button type="button" className="secondary-button" onClick={this.randomizeMovie} disabled={isLoading}>Random latest</button>
             </div>
           </div>
 
