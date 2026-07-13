@@ -18,7 +18,7 @@ MovieGame needs synonym clues that are easy for one player to act out and still 
 
 ## Live-call test status
 
-I attempted direct terminal API calls from this environment for all candidate APIs. The environment proxy rejected outbound CONNECT tunnels with `403 Forbidden`, so live JSON quality sampling could not be completed from the terminal here.
+Initial calls were blocked by the environment proxy with `403 Forbidden`. The calls were rerun on 2026-07-11 with approved network access, and live JSON sampling is now complete.
 
 Commands attempted:
 
@@ -31,12 +31,34 @@ curl -sS --max-time 10 'https://www.dictionaryapi.com/api/v3/references/thesauru
 curl -sS --max-time 10 'https://wordsapiv1.p.rapidapi.com/words/scream/synonyms'
 ```
 
-Observed output:
+Observed final status:
 
-```text
-Forbidden
-curl: (56) CONNECT tunnel failed, response 403
-```
+| API | Live result | What the response showed |
+| --- | --- | --- |
+| Datamuse | `200 OK` | Returned ranked synonyms plus part-of-speech, syllable, and frequency metadata. For `scream`, useful results included `cry`, `shout`, and `yell`. |
+| Free Dictionary API (`dictionaryapi.dev`) | `200 OK` | Returned complete definitions, but synonym coverage was inconsistent and often empty. |
+| FreeDictionaryAPI.com | `200 OK` | Returned rich Wiktionary entries, but synonyms are deeply nested, inconsistently populated, and not ranked for clue quality. |
+| Merriam-Webster | `200 OK` with an error payload | The demo placeholder returned `Invalid API key. Not subscribed for this reference.`, confirming that a real subscribed key is required. |
+| WordsAPI | `401 Unauthorized` | Confirmed that RapidAPI authentication is required. |
+
+### Ten-word live sample
+
+The three no-key APIs were queried for all ten example movie words. Counts below are returned synonym candidates found in each response; each Datamuse request was capped at 10.
+
+| Word | Datamuse | dictionaryapi.dev | FreeDictionaryAPI.com | Datamuse quality notes |
+| --- | ---: | ---: | ---: | --- |
+| scream | 10 | 2 | 35 | Strong: `cry`, `shout`, `yell` |
+| frozen | 10 | 9 | 0 | Strong: `cold`, `frigid`; needs filtering |
+| speed | 10 | 4 | 29 | Strong: `rush`, `race`, `hurry` |
+| brave | 10 | 6 | 30 | Strong: `bold`, `valiant`; some uncommon words |
+| split | 10 | 3 | 47 | Strong: `break`, `rip`, `cut`, `tear` |
+| sing | 8 | 0 | 1 | Weak strict set; fallback adds `chant`, `croon`, `carol` |
+| heat | 10 | 7 | 8 | Mixed; fallback adds `ignite`, `warmth`, `fire up` |
+| alien | 10 | 4 | 78 | Mixed senses; includes `stranger`, `foreign`, `extraterrestrial` |
+| jaws | 1 | 0 | 0 | Strict set fails; fallback adds `mouth`, `maw`, `claws` |
+| rocky | 8 | 0 | 31 | Useful after filtering: `rough`, `hard`, `stony` |
+
+Raw counts overstate FreeDictionaryAPI.com usefulness: its candidates can occur at multiple nested entry/sense levels, are unranked, and may mix meanings. Datamuse produced immediately usable candidates for 8 of 10 words and recovered useful candidates for the two weak cases through `ml`.
 
 ## Evaluation method
 
@@ -61,8 +83,10 @@ https://api.datamuse.com/words?rel_syn=<word>&md=psf&max=20
 Recommended fallback endpoint when strict synonyms are weak:
 
 ```text
-https://api.datamuse.com/words?ml=<word>&topics=movie,action,emotion&md=psf&max=20
+https://api.datamuse.com/words?ml=<word>&md=psf&max=20
 ```
+
+Do not apply `topics=movie,action,emotion` by default. Live testing showed topic bias can introduce title associations instead of synonyms—for example, `rocky` produced `Balboa`. Topic hints should only be added when the game knows the intended word sense and the hint cannot reveal the movie.
 
 Why Datamuse wins for this game:
 
@@ -118,4 +142,21 @@ For the actual app, do not simply show the first API result. Add a small filter/
 6. If fewer than 3 good clues remain, query Datamuse `ml` and re-rank.
 7. If still weak, use a local curated fallback map for common movie words.
 
-Final recommendation: **Datamuse + local charades ranking/fallback**. The API supplies candidates; our game-specific scorer chooses the actable clue.
+## Final report
+
+The previously failed live-call work is complete. The live results support the original primary recommendation with one change to the fallback query:
+
+**Use Datamuse `rel_syn`, then unbiased Datamuse `ml`, then a local curated fallback.**
+
+Datamuse is the only tested no-key API that consistently combines ranked synonym-like candidates with metadata useful for a charades scorer. It is not sufficient to display the first result: `scream` ranked `squall` above the more actable `cry`, `shout`, and `yell`, and ambiguous words such as `sing`, `alien`, and `jaws` mix senses. The local ranking layer is therefore required, not optional.
+
+Production sequence:
+
+1. Request `rel_syn` with `md=psf&max=20`.
+2. Normalize and deduplicate results; reject the source word, shared word roots, multiword phrases, rare words, and unsuitable parts of speech.
+3. Rank for common, short, actable verbs/adjectives using syllable and frequency metadata.
+4. If fewer than three candidates pass, request unbiased `ml` and run the same filters.
+5. If the result is still weak or sense-ambiguous, use the curated local map.
+6. Cache accepted clues so gameplay does not depend on network latency or API availability.
+
+The keyed Merriam-Webster and WordsAPI services could not be quality-sampled without credentials, but their authentication behavior was successfully verified. They are not needed for the recommended implementation. Free Dictionary API and FreeDictionaryAPI.com remain useful for definition or validation features, but their live synonym output is not dependable enough to drive charades clues.

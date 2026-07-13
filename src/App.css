@@ -297,36 +297,13 @@ button:disabled {
   color: var(--accent-strong);
 }
 
-.source-words {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.45rem;
-  margin-bottom: 0.7rem;
-}
-
-.source-words span {
-  padding: 0.35rem 0.6rem;
-  border: 1px solid rgba(255, 204, 102, 0.28);
-  border-radius: 999px;
-  color: var(--accent-strong);
-  background: rgba(255, 204, 102, 0.1);
-  font-size: 0.8rem;
-}
-
-.clue-list {
+.clue-groups {
   display: grid;
   grid-template-columns: 1fr;
-  gap: 0.55rem;
-  padding: 0;
-  margin: 0;
-  list-style: none;
+  gap: 0.7rem;
 }
 
-.clue-card {
-  display: grid;
-  grid-template-columns: auto minmax(0, 1fr);
-  align-items: center;
-  gap: 0.65rem;
+.clue-group {
   padding: 0.8rem;
   border: 1px solid rgba(255, 255, 255, 0.16);
   border-radius: 18px;
@@ -335,19 +312,68 @@ button:disabled {
   text-align: left;
 }
 
-.clue-number {
-  padding: 0.25rem 0.5rem;
-  border-radius: 999px;
-  color: #1d2635;
-  background: var(--accent-strong);
+.clue-group h3 {
+  margin: 0 0 0.6rem;
+  color: var(--accent-strong);
   font-family: Baloo, ComicRelief, system-ui, sans-serif;
-  font-size: 0.78rem;
-  line-height: 1;
-  white-space: nowrap;
+  font-size: 1.05rem;
 }
 
-.clue-phrase {
+.clue-options {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.45rem;
+}
+
+button.clue-option {
+  min-height: 0;
+  padding: 0.45rem 0.7rem;
+  border-color: rgba(255, 255, 255, 0.24);
+  border-radius: 999px;
+  color: #fff;
+  background: rgba(255, 255, 255, 0.08);
+  box-shadow: none;
+  font-size: 0.9rem;
+}
+
+button.clue-option:hover {
+  border-color: var(--accent-strong);
+  transform: none;
+}
+
+button.clue-option.is-selected {
+  border-color: var(--accent-strong);
+  color: #1d2635;
+  background: var(--accent-strong);
+}
+
+.selected-clues {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  margin-top: 0.8rem;
+  padding: 0.85rem;
+  border: 1px solid rgba(255, 204, 102, 0.28);
+  border-radius: 18px;
+  background: rgba(255, 204, 102, 0.08);
+  text-align: left;
+}
+
+.selected-clues p {
+  margin: 0;
+}
+
+.selected-clue-phrase {
+  margin-top: 0.2rem !important;
+  color: #fff;
+  font-size: 1.05rem;
   overflow-wrap: anywhere;
+}
+
+.selected-clue-placeholder {
+  margin-top: 0.2rem !important;
+  color: var(--muted);
 }
 
 .empty-state {
@@ -505,7 +531,7 @@ button:disabled {
     font-size: 2.35rem;
   }
 
-  .clue-list,
+  .clue-groups,
   .scoreboard {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }

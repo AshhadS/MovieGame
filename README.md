@@ -1,6 +1,6 @@
 # Movie Game
 
-Movie Game is a small React app that generates wordplay ideas from a movie title. Enter a title, blur the input, and the app asks the Datamuse API for related words for each title word.
+Movie Game is a small React app that generates wordplay ideas from a movie title. Enter a title and the app asks the configured clue-word provider for alternatives to each title word.
 
 ## Stack
 
@@ -17,6 +17,21 @@ npm run dev
 ```
 
 The app runs through Vite. GitHub Actions deploys the built static app from `dist` to GitHub Pages.
+
+## Synonym provider
+
+Copy `.env.example` to `.env.local` and set `VITE_SYNONYM_PROVIDER`:
+
+```text
+VITE_SYNONYM_PROVIDER=related
+```
+
+Available values:
+
+- `related` (default) preserves the existing behavior by taking Datamuse `ml` results in API order.
+- `datamuse` uses the recommended integration: ranked `rel_syn` results first, followed by an unbiased `ml` fallback when strict synonyms do not provide enough clues.
+
+Restart the Vite development server after changing the value. For a deployed build, set `VITE_SYNONYM_PROVIDER` in the hosting environment before `npm run build`. Because this is a Vite build variable, switching providers requires rebuilding the static site.
 
 ## Build
 
@@ -57,4 +72,4 @@ https://<your-github-username>.github.io/MovieGame/
 
 If you deploy with a custom domain at the site root, set `BASE_PATH=/` in the workflow build step before running `npm run build`.
 
-> Note: GitHub Pages only hosts static files. The React app calls the public Datamuse API directly, so it works on Pages, but the existing `netlify/functions` examples are not deployed by GitHub Pages.
+> Note: GitHub Pages only hosts static files. Both provider modes call the public Datamuse API directly, so they work on Pages, but the existing `netlify/functions` examples are not deployed by GitHub Pages.

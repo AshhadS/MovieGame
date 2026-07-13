@@ -1,4 +1,5 @@
 import React, { Component } from 'react';
+import { getClueWords } from '../services/synonymProviders.js';
 
 const MOVIE_TITLES = [
   'Blade Runner',
@@ -63,6 +64,7 @@ class Main extends Component {
     this.state = {
       movie_name: getRandomMovieTitle(),
       synonyms: [],
+      selectedClues: [],
       clueMovieName: '',
       synonyms_count: 5,
       isLoading: false,
@@ -95,7 +97,7 @@ class Main extends Component {
       .filter(Boolean);
 
     if (encoded_name.length === 0) {
-      this.setState({ synonyms: [], clueMovieName: '', statusMessage: 'Add a movie title to get clue words.' });
+      this.setState({ synonyms: [], selectedClues: [], clueMovieName: '', statusMessage: 'Add a movie title to get clue words.' });
       return;
     }
 
@@ -106,21 +108,21 @@ class Main extends Component {
         return Promise.resolve([word]);
       }
 
-      return fetch(`https://api.datamuse.com/words?ml=${encodeURIComponent(word)}`)
-        .then(res => res.json())
-        .then(result => {
-          const matches = result.slice(0, this.state.synonyms_count).map(resp => resp.word);
+      return getClueWords(word, this.state.synonyms_count)
+        .then(matches => {
           return matches.length ? matches : [word];
         });
     })).then(syns => {
       this.setState({
         synonyms: syns,
+        selectedClues: syns.map(() => []),
         isLoading: false,
-        statusMessage: 'Use these clue rows to help players guess the real movie title.'
+        statusMessage: 'Choose one or more clue words from each group.'
       });
     }, () => {
       this.setState({
         synonyms: [],
+        selectedClues: [],
         isLoading: false,
         statusMessage: 'Could not reach the clue-word service. Try again in a moment.'
       });
@@ -133,6 +135,7 @@ class Main extends Component {
       movie_name: nextMovieName,
       clueMovieName: '',
       synonyms: [],
+      selectedClues: [],
       statusMessage: nextMovieName.trim()
         ? 'Press Enter or Search to generate clue words for this title.'
         : 'Type a movie title, then press Enter or tap Search.',
@@ -143,7 +146,7 @@ class Main extends Component {
     const submittedMovieName = movieName.trim();
 
     if (!submittedMovieName) {
-      this.setState({ synonyms: [], clueMovieName: '', statusMessage: 'Add a movie title to get clue words.' });
+      this.setState({ synonyms: [], selectedClues: [], clueMovieName: '', statusMessage: 'Add a movie title to get clue words.' });
       return;
     }
 
@@ -258,7 +261,25 @@ class Main extends Component {
 
   randomizeMovie=()=> {
     const randomTitle = getRandomMovieTitle(this.state.movie_name || this.state.clueMovieName);
-    this.setState({ movie_name: randomTitle, clueMovieName: '', synonyms: [] }, () => this.generateSynonyms(randomTitle));
+    this.setState({ movie_name: randomTitle, clueMovieName: '', synonyms: [], selectedClues: [] }, () => this.generateSynonyms(randomTitle));
+  }
+
+  toggleClue=(wordIndex, clue)=> {
+    this.setState(({ selectedClues }) => {
+      const nextSelectedClues = selectedClues.map(words => [...words]);
+      const selectedForWord = nextSelectedClues[wordIndex] || [];
+      const isSelected = selectedForWord.includes(clue);
+
+      nextSelectedClues[wordIndex] = isSelected
+        ? selectedForWord.filter(word => word !== clue)
+        : [...selectedForWord, clue];
+
+      return { selectedClues: nextSelectedClues };
+    });
+  }
+
+  clearSelectedClues=()=> {
+    this.setState(({ synonyms }) => ({ selectedClues: synonyms.map(() => []) }));
   }
 
   formatTime = () => {
@@ -294,32 +315,12 @@ class Main extends Component {
   }
 
   render() {
-    let {synonyms, movie_name, clueMovieName, synonyms_count, isLoading, statusMessage, teams, activeTeam, isTimerRunning, secondsRemaining, isScorePopupOpen} = this.state;
+    let {synonyms, movie_name, clueMovieName, isLoading, statusMessage, teams, activeTeam, isTimerRunning, secondsRemaining, isScorePopupOpen, selectedClues} = this.state;
     const activeTeamName = teams[activeTeam].name;
 
-    let syn_list = null;
     const words = (clueMovieName || movie_name).split(' ').filter(Boolean);
-
-    if(synonyms.length === words.length ) {
-      const built_words = [];
-
-      for (let i = 0; i <= synonyms_count - 1; i++) {
-        const rowWords = [];
-
-        for (let s = 0; s <= synonyms.length - 1; s++) {
-          rowWords.push(synonyms[s][i] || synonyms[s][0] || words[s]);
-        }
-
-        built_words[i] = rowWords.join(' · ');
-      }
-
-      syn_list = built_words.map((word, index) => (
-        <li className="clue-card" key={`${word}-${index}`}>
-          <span className="clue-number">Set {index + 1}</span>
-          <span className="clue-phrase">{word}</span>
-        </li>
-      ));
-    }
+    const hasClues = words.length > 0 && synonyms.length === words.length;
+    const selectedWords = selectedClues.flat();
 
     return (
       <main className="main-wrapper">
@@ -358,16 +359,51 @@ class Main extends Component {
           <div className="section-heading">
             <div>
               <p className="eyebrow">Play words</p>
-              <h2 id="clues-heading">Clue sets</h2>
+              <h2 id="clues-heading">Choose clue words</h2>
             </div>
             {clueMovieName && <p className="clue-title">For <strong>{clueMovieName}</strong></p>}
           </div>
-          {words.length > 0 && syn_list && (
-            <div className="source-words" aria-label="Movie title words">
-              {words.map((word, index) => <span key={`${word}-${index}`}>{word}</span>)}
-            </div>
+          {hasClues ? (
+            <>
+              <div className="clue-groups">
+                {words.map((sourceWord, wordIndex) => (
+                  <article className="clue-group" key={`${sourceWord}-${wordIndex}`}>
+                    <h3>{sourceWord}</h3>
+                    <div className="clue-options" aria-label={`Clue words for ${sourceWord}`}>
+                      {synonyms[wordIndex].map((clue, clueIndex) => {
+                        const isSelected = selectedClues[wordIndex]?.includes(clue);
+
+                        return (
+                          <button
+                            type="button"
+                            className={`clue-option ${isSelected ? 'is-selected' : ''}`}
+                            aria-pressed={isSelected}
+                            key={`${clue}-${clueIndex}`}
+                            onClick={() => this.toggleClue(wordIndex, clue)}
+                          >
+                            {clue}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </article>
+                ))}
+              </div>
+              <div className="selected-clues" aria-live="polite">
+                <div>
+                  <p className="eyebrow">Your selected clues</p>
+                  <p className={selectedWords.length ? 'selected-clue-phrase' : 'selected-clue-placeholder'}>
+                    {selectedWords.length ? selectedWords.join(' · ') : 'Tap clue words above to build your clue.'}
+                  </p>
+                </div>
+                {selectedWords.length > 0 && (
+                  <button type="button" className="secondary-button" onClick={this.clearSelectedClues}>Clear</button>
+                )}
+              </div>
+            </>
+          ) : (
+            <p className="empty-state">Start typing a title to clear old clues. Search keeps existing clues visible until the new clue words are ready.</p>
           )}
-          {syn_list ? <ul className="clue-list">{syn_list}</ul> : <p className="empty-state">Start typing a title to clear old clues. Search keeps existing clues visible until the new clue sets are ready.</p>}
         </section>
 
         <section className="timer-card compact-timer" aria-label="Round timer">
