@@ -337,9 +337,12 @@ class Main extends Component {
     return (
       <main className="main-wrapper">
         <header className="top-bar">
-          <div>
-            <p className="eyebrow">Movie clue party game</p>
-            <h1 id="movie-name-heading">Remix</h1>
+          <div className="brand-lockup">
+            <img className="brand-icon" src={`${import.meta.env.BASE_URL}favicon.svg`} alt="" aria-hidden="true" />
+            <div>
+              <p className="eyebrow">Movie synonym game</p>
+              <h1 id="movie-name-heading">Charades</h1>
+            </div>
           </div>
           <div className="top-status" aria-label="Game status">
             <span className="turn-pill">{activeTeamName}</span>

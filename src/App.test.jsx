@@ -16,6 +16,8 @@ it('renders without crashing', () => {
     root.render(<App />);
   });
 
+  expect(div.querySelector('.brand-icon').getAttribute('src')).toContain('favicon.svg');
+
   act(() => {
     root.unmount();
   });
