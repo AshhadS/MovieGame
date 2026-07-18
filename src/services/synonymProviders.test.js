@@ -7,6 +7,7 @@ const response = body => ({
 });
 
 afterEach(() => {
+  localStorage.clear();
   vi.restoreAllMocks();
   vi.unstubAllEnvs();
 });
@@ -66,6 +67,32 @@ describe('synonym providers', () => {
       .resolves.toEqual(['cry', 'shout', 'yell']);
     expect(fetchMock).toHaveBeenCalledOnce();
     expect(fetchMock.mock.calls[0][0]).toContain('/references/thesaurus/json/scream?key=test-key');
+  });
+
+  it('reuses cached Merriam-Webster synonyms across repeated lookups', async () => {
+    vi.stubEnv('VITE_MERRIAM_WEBSTER_API_KEY', 'test-key');
+    const fetchMock = vi.spyOn(globalThis, 'fetch').mockResolvedValue(response([{
+      meta: { syns: [['dash', 'race', 'sprint']] },
+    }]));
+
+    await expect(getClueWords('Run', 2, 'merriam-webster')).resolves.toEqual(['dash', 'race']);
+    await expect(getClueWords('run', 3, 'merriam-webster')).resolves.toEqual(['dash', 'race', 'sprint']);
+
+    expect(fetchMock).toHaveBeenCalledOnce();
+  });
+
+  it('deduplicates simultaneous Merriam-Webster lookups', async () => {
+    vi.stubEnv('VITE_MERRIAM_WEBSTER_API_KEY', 'test-key');
+    const fetchMock = vi.spyOn(globalThis, 'fetch').mockResolvedValue(response([{
+      meta: { syns: [['leap', 'bound']] },
+    }]));
+
+    await expect(Promise.all([
+      getClueWords('jump', 1, 'merriam-webster'),
+      getClueWords('JUMP', 2, 'merriam-webster'),
+    ])).resolves.toEqual([['leap'], ['leap', 'bound']]);
+
+    expect(fetchMock).toHaveBeenCalledOnce();
   });
 
   it('requires an API key in Merriam-Webster mode', async () => {

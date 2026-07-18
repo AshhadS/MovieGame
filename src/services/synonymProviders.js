@@ -1,10 +1,73 @@
 const DATAMUSE_URL = 'https://api.datamuse.com/words';
 const MERRIAM_WEBSTER_URL = 'https://www.dictionaryapi.com/api/v3/references/thesaurus/json';
+const MERRIAM_WEBSTER_CACHE_KEY = 'movie-game:merriam-webster-cache:v1';
+const MERRIAM_WEBSTER_CACHE_TTL_MS = 30 * 24 * 60 * 60 * 1000;
+const MERRIAM_WEBSTER_CACHE_MAX_ENTRIES = 250;
 const DEFAULT_PROVIDER = 'related';
 const SUPPORTED_PROVIDERS = new Set(['related', 'datamuse', 'merriam-webster']);
 const ABSTRACT_WORDS = new Set([
   'condition', 'process', 'quality', 'relation', 'state', 'status',
 ]);
+const merriamWebsterRequests = new Map();
+
+const readMerriamWebsterCache = () => {
+  try {
+    const cache = JSON.parse(localStorage.getItem(MERRIAM_WEBSTER_CACHE_KEY));
+    return cache && typeof cache === 'object' ? cache : {};
+  } catch {
+    return {};
+  }
+};
+
+const writeMerriamWebsterCache = cache => {
+  try {
+    localStorage.setItem(MERRIAM_WEBSTER_CACHE_KEY, JSON.stringify(cache));
+  } catch {
+    // Caching is an optimization; private browsing or a full store must not break clues.
+  }
+};
+
+const getCachedMerriamWebsterWords = word => {
+  const cache = readMerriamWebsterCache();
+  const entry = cache[word];
+
+  if (!entry || !Array.isArray(entry.words) || entry.expiresAt <= Date.now()) {
+    if (entry) {
+      delete cache[word];
+      writeMerriamWebsterCache(cache);
+    }
+    return null;
+  }
+
+  entry.lastAccessedAt = Date.now();
+  writeMerriamWebsterCache(cache);
+  return entry.words;
+};
+
+const cacheMerriamWebsterWords = (word, words) => {
+  const now = Date.now();
+  const cache = readMerriamWebsterCache();
+
+  Object.entries(cache).forEach(([cachedWord, entry]) => {
+    if (!entry || entry.expiresAt <= now) delete cache[cachedWord];
+  });
+
+  cache[word] = {
+    words,
+    expiresAt: now + MERRIAM_WEBSTER_CACHE_TTL_MS,
+    lastAccessedAt: now,
+  };
+
+  const entries = Object.entries(cache);
+  if (entries.length > MERRIAM_WEBSTER_CACHE_MAX_ENTRIES) {
+    entries
+      .sort(([, left], [, right]) => left.lastAccessedAt - right.lastAccessedAt)
+      .slice(0, entries.length - MERRIAM_WEBSTER_CACHE_MAX_ENTRIES)
+      .forEach(([cachedWord]) => delete cache[cachedWord]);
+  }
+
+  writeMerriamWebsterCache(cache);
+};
 
 const requestDatamuse = async params => {
   const response = await fetch(`${DATAMUSE_URL}?${new URLSearchParams(params)}`);
@@ -96,43 +159,60 @@ const getMerriamWebsterWords = async (word, count) => {
     throw new Error('Merriam-Webster is not configured');
   }
 
-  const response = await fetch(
-    `${MERRIAM_WEBSTER_URL}/${encodeURIComponent(word)}?key=${encodeURIComponent(apiKey)}`,
-  );
+  const normalizedWord = word.trim().toLowerCase();
+  const cachedWords = getCachedMerriamWebsterWords(normalizedWord);
 
-  if (!response.ok) {
-    throw new Error(`Merriam-Webster request failed with status ${response.status}`);
+  if (cachedWords) {
+    return cachedWords.slice(0, count);
   }
 
-  const entries = await response.json();
+  if (!merriamWebsterRequests.has(normalizedWord)) {
+    const request = (async () => {
+      const response = await fetch(
+        `${MERRIAM_WEBSTER_URL}/${encodeURIComponent(normalizedWord)}?key=${encodeURIComponent(apiKey)}`,
+      );
 
-  if (!Array.isArray(entries)) {
-    return [];
-  }
-
-  const source = word.toLowerCase();
-  const seen = new Set();
-
-  return entries
-    .flatMap(entry => Array.isArray(entry?.meta?.syns) ? entry.meta.syns.flat(Infinity) : [])
-    .filter(candidate => typeof candidate === 'string')
-    .map(candidate => candidate.trim())
-    .filter(candidate => {
-      const normalized = candidate.toLowerCase();
-      const isUsable = normalized
-        && normalized !== source
-        && !seen.has(normalized)
-        && !normalized.includes(' ')
-        && normalized.length <= 10
-        && !ABSTRACT_WORDS.has(normalized);
-
-      if (isUsable) {
-        seen.add(normalized);
+      if (!response.ok) {
+        throw new Error(`Merriam-Webster request failed with status ${response.status}`);
       }
 
-      return isUsable;
-    })
-    .slice(0, count);
+      const entries = await response.json();
+
+      if (!Array.isArray(entries)) {
+        return [];
+      }
+
+      const seen = new Set();
+
+      const words = entries
+        .flatMap(entry => Array.isArray(entry?.meta?.syns) ? entry.meta.syns.flat(Infinity) : [])
+        .filter(candidate => typeof candidate === 'string')
+        .map(candidate => candidate.trim())
+        .filter(candidate => {
+          const normalized = candidate.toLowerCase();
+          const isUsable = normalized
+            && normalized !== normalizedWord
+            && !seen.has(normalized)
+            && !normalized.includes(' ')
+            && normalized.length <= 10
+            && !ABSTRACT_WORDS.has(normalized);
+
+          if (isUsable) {
+            seen.add(normalized);
+          }
+
+          return isUsable;
+        });
+
+      cacheMerriamWebsterWords(normalizedWord, words);
+      return words;
+    })().finally(() => merriamWebsterRequests.delete(normalizedWord));
+
+    merriamWebsterRequests.set(normalizedWord, request);
+  }
+
+  const words = await merriamWebsterRequests.get(normalizedWord);
+  return words.slice(0, count);
 };
 
 export const getConfiguredSynonymProvider = () => {

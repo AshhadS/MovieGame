@@ -32,6 +32,8 @@ Available values:
 - `datamuse` uses the recommended integration: ranked `rel_syn` results first, followed by an unbiased `ml` fallback when strict synonyms do not provide enough clues.
 - `merriam-webster` uses Merriam-Webster's Collegiate Thesaurus synonym lists and requires `VITE_MERRIAM_WEBSTER_API_KEY`.
 
+Merriam-Webster results are cached in the browser for 30 days (up to 250 words). Repeated or simultaneous lookups for the same word reuse the cached result instead of spending another API request.
+
 To use Merriam-Webster locally, add this to `.env.local`:
 
 ```text
