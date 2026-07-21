@@ -18,6 +18,13 @@ concurrency:
 jobs:
   build:
     runs-on: ubuntu-latest
+    env:
+      BASE_PATH: /${{ github.event.repository.name }}/
+      VITE_SYNONYM_PROVIDER: ${{ vars.VITE_SYNONYM_PROVIDER }}
+      VITE_MERRIAM_WEBSTER_API_KEY: ${{ vars.VITE_MERRIAM_WEBSTER_API_KEY }}
+      VITE_TMDB_API_TOKEN: ${{ vars.VITE_TMDB_API_TOKEN }}
+      VITE_TMDB_LANGUAGE: ${{ vars.VITE_TMDB_LANGUAGE }}
+      VITE_TMDB_REGION: ${{ vars.VITE_TMDB_REGION }}
     steps:
       - name: Checkout
         uses: actions/checkout@v5
@@ -31,15 +38,16 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
+      - name: Validate build configuration
+        shell: bash
+        run: |
+          if [[ "$VITE_SYNONYM_PROVIDER" == "merriam-webster" && -z "$VITE_MERRIAM_WEBSTER_API_KEY" ]]; then
+            echo "::error::VITE_MERRIAM_WEBSTER_API_KEY is required when VITE_SYNONYM_PROVIDER=merriam-webster"
+            exit 1
+          fi
+
       - name: Build for GitHub Pages
         run: npm run build
-        env:
-          BASE_PATH: /${{ github.event.repository.name }}/
-          VITE_SYNONYM_PROVIDER: ${{ vars.VITE_SYNONYM_PROVIDER }}
-          VITE_MERRIAM_WEBSTER_API_KEY: ${{ secrets.MERRIAM_WEBSTER_API_KEY }}
-          VITE_TMDB_API_TOKEN: ${{ secrets.TMDB_API_TOKEN }}
-          VITE_TMDB_LANGUAGE: ${{ vars.TMDB_LANGUAGE }}
-          VITE_TMDB_REGION: ${{ vars.TMDB_REGION }}
 
       - name: Upload GitHub Pages artifact
         uses: actions/upload-pages-artifact@v4
