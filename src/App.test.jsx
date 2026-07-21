@@ -42,8 +42,7 @@ it('groups clue words and lets the user choose them', async () => {
     root.render(<App />);
   });
 
-  const searchButton = [...div.querySelectorAll('button')]
-    .find(button => button.textContent === 'Search');
+  const searchButton = div.querySelector('button[aria-label="Search movie title"]');
   const movieInput = div.querySelector('#movie-name');
   const submittedMovieTitle = movieInput.value;
 

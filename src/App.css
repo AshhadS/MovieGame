@@ -144,6 +144,20 @@ button:disabled {
   font-size: 1.85rem;
 }
 
+.icon-button {
+  display: inline-grid;
+  width: 2.85rem;
+  height: 2.85rem;
+  padding: 0;
+  place-items: center;
+}
+
+.button-icon {
+  width: 1.35rem;
+  height: 1.35rem;
+  pointer-events: none;
+}
+
 .brand-lockup {
   min-width: 0;
   display: flex;
@@ -475,6 +489,11 @@ button.clue-option.is-selected {
   border-radius: 50%;
 }
 
+.score-actions .button-icon {
+  width: 1.2rem;
+  height: 1.2rem;
+}
+
 .score-round-actions {
   margin-top: 0.25rem;
 }
@@ -489,6 +508,10 @@ button.clue-option.is-selected {
 .close-button,
 .score-toggle {
   padding-inline: 0.75rem;
+}
+
+.close-button.icon-button {
+  padding: 0;
 }
 
 .score-toggle {

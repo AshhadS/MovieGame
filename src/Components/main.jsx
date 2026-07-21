@@ -2,6 +2,28 @@ import React, { Component } from 'react';
 import { getClueWords } from '../services/synonymProviders.js';
 import { getRandomLatestMovie, isTmdbConfigured } from '../services/movieProvider.js';
 
+const Icon = ({ name }) => {
+  const paths = {
+    search: <><circle cx="11" cy="11" r="7" /><path d="m20 20-4-4" /></>,
+    shuffle: <><path d="M16 3h5v5" /><path d="m4 20 5.5-5.5" /><path d="m15 9 6-6" /><path d="M4 4l16.5 16.5" /><path d="M16 21h5v-5" /></>,
+    play: <path d="m8 5 11 7-11 7Z" />,
+    pause: <><path d="M9 5v14" /><path d="M15 5v14" /></>,
+    reset: <><path d="M3 12a9 9 0 1 0 3-6.7L3 8" /><path d="M3 3v5h5" /></>,
+    plus: <><path d="M12 5v14" /><path d="M5 12h14" /></>,
+    minus: <path d="M5 12h14" />,
+    skip: <><path d="m5 5 9 7-9 7Z" /><path d="M19 5v14" /></>,
+    clear: <><path d="m3 6 3 15h12l3-15" /><path d="M8 6V3h8v3" /><path d="M1 6h22" /><path d="M10 10v7M14 10v7" /></>,
+    close: <><path d="M6 6l12 12" /><path d="M18 6 6 18" /></>,
+    trophy: <><path d="M8 4h8v5a4 4 0 0 1-8 0Z" /><path d="M12 13v5" /><path d="M8 21h8" /><path d="M6 6H3v2a4 4 0 0 0 5 4M18 6h3v2a4 4 0 0 1-5 4" /></>,
+  };
+
+  return (
+    <svg className="button-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      {paths[name]}
+    </svg>
+  );
+};
+
 const MOVIE_TITLES = [
   'Blade Runner',
   'The Grand Budapest Hotel',
@@ -317,15 +339,15 @@ class Main extends Component {
             <h2>{team.name}</h2>
             <p className="score">{team.score}</p>
             <div className="score-actions">
-              <button type="button" className="secondary-button" onClick={() => this.updateScore(index, -1, true)}>-</button>
-              <button type="button" className="secondary-button" onClick={() => this.updateScore(index, 1, true)}>+</button>
+              <button type="button" className="secondary-button icon-button" aria-label={`Subtract a point from ${team.name}`} title="Subtract point" onClick={() => this.updateScore(index, -1, true)}><Icon name="minus" /></button>
+              <button type="button" className="secondary-button icon-button" aria-label={`Add a point to ${team.name}`} title="Add point" onClick={() => this.updateScore(index, 1, true)}><Icon name="plus" /></button>
             </div>
           </article>
         ))}
         <div className="round-actions score-round-actions">
-          <button type="button" onClick={() => this.awardPoint(true)}>Add point</button>
-          <button type="button" className="secondary-button" onClick={() => this.passTurn(true)}>Skip</button>
-          <button type="button" className="secondary-button" onClick={() => this.resetScores(true)}>Reset scores</button>
+          <button type="button" className="icon-button" aria-label="Award point" title="Award point" onClick={() => this.awardPoint(true)}><Icon name="trophy" /></button>
+          <button type="button" className="secondary-button icon-button" aria-label="Skip turn" title="Skip turn" onClick={() => this.passTurn(true)}><Icon name="skip" /></button>
+          <button type="button" className="secondary-button icon-button" aria-label="Reset scores" title="Reset scores" onClick={() => this.resetScores(true)}><Icon name="reset" /></button>
         </div>
       </div>
     );
@@ -367,8 +389,8 @@ class Main extends Component {
                 onChange={e => {this.input_change(e)}}
                 onKeyDown={this.input_key_down}
               />
-              <button type="button" onClick={() => this.submitMovieTitle()} disabled={isLoading}>Search</button>
-              <button type="button" className="secondary-button" onClick={this.randomizeMovie} disabled={isLoading}>Random latest</button>
+              <button type="button" className="icon-button" aria-label="Search movie title" title="Search" onClick={() => this.submitMovieTitle()} disabled={isLoading}><Icon name="search" /></button>
+              <button type="button" className="secondary-button icon-button" aria-label="Choose a random latest movie" title="Random latest" onClick={this.randomizeMovie} disabled={isLoading}><Icon name="shuffle" /></button>
             </div>
           </div>
 
@@ -420,7 +442,7 @@ class Main extends Component {
                   </p>
                 </div>
                 {selectedWords.length > 0 && (
-                  <button type="button" className="secondary-button" onClick={this.clearSelectedClues}>Clear</button>
+                  <button type="button" className="secondary-button icon-button" aria-label="Clear selected clues" title="Clear selected clues" onClick={this.clearSelectedClues}><Icon name="clear" /></button>
                 )}
               </div>
             </>
@@ -436,13 +458,13 @@ class Main extends Component {
           </div>
           <div className="timer-controls">
             <div className="timer-actions">
-              <button type="button" onClick={this.startTimer} disabled={isTimerRunning || secondsRemaining === 0}>Start</button>
-              <button type="button" className="secondary-button" onClick={this.stopTimer} disabled={!isTimerRunning}>Pause</button>
-              <button type="button" className="secondary-button" onClick={this.resetTimer}>Reset</button>
+              <button type="button" className="icon-button" aria-label="Start timer" title="Start timer" onClick={this.startTimer} disabled={isTimerRunning || secondsRemaining === 0}><Icon name="play" /></button>
+              <button type="button" className="secondary-button icon-button" aria-label="Pause timer" title="Pause timer" onClick={this.stopTimer} disabled={!isTimerRunning}><Icon name="pause" /></button>
+              <button type="button" className="secondary-button icon-button" aria-label="Reset timer" title="Reset timer" onClick={this.resetTimer}><Icon name="reset" /></button>
             </div>
             <div className="turn-result-actions">
-              <button type="button" className="add-point-button" onClick={() => this.awardPoint()}>Add point</button>
-              <button type="button" className="secondary-button skip-button" onClick={() => this.passTurn()}>Skip</button>
+              <button type="button" className="add-point-button icon-button" aria-label="Award point" title="Award point" onClick={() => this.awardPoint()}><Icon name="trophy" /></button>
+              <button type="button" className="secondary-button skip-button icon-button" aria-label="Skip turn" title="Skip turn" onClick={() => this.passTurn()}><Icon name="skip" /></button>
             </div>
           </div>
         </section>
@@ -452,7 +474,7 @@ class Main extends Component {
             <section className="score-modal" role="dialog" aria-modal="true" aria-labelledby="score-heading" onClick={event => event.stopPropagation()}>
               <div className="modal-header">
                 <h2 id="score-heading">Scores</h2>
-                <button type="button" className="secondary-button close-button" onClick={this.closeScorePopup}>Close</button>
+                <button type="button" className="secondary-button close-button icon-button" aria-label="Close scores" title="Close" onClick={this.closeScorePopup}><Icon name="close" /></button>
               </div>
               {this.renderScoreControls()}
             </section>
