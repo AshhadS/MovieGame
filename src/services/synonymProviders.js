@@ -9,12 +9,22 @@ const ABSTRACT_WORDS = new Set([
   'condition', 'process', 'quality', 'relation', 'state', 'status',
 ]);
 const merriamWebsterRequests = new Map();
+const LOG_PREFIX = '[MovieGame synonyms]';
+
+const logInfo = (message, details = {}) => console.info(LOG_PREFIX, message, details);
+const logWarning = (message, details = {}) => console.warn(LOG_PREFIX, message, details);
+const logError = (message, error, details = {}) => console.error(
+  LOG_PREFIX,
+  message,
+  { ...details, error },
+);
 
 const readMerriamWebsterCache = () => {
   try {
     const cache = JSON.parse(localStorage.getItem(MERRIAM_WEBSTER_CACHE_KEY));
     return cache && typeof cache === 'object' ? cache : {};
-  } catch {
+  } catch (error) {
+    logWarning('Could not read the Merriam-Webster cache; continuing without it.', { error });
     return {};
   }
 };
@@ -22,8 +32,9 @@ const readMerriamWebsterCache = () => {
 const writeMerriamWebsterCache = cache => {
   try {
     localStorage.setItem(MERRIAM_WEBSTER_CACHE_KEY, JSON.stringify(cache));
-  } catch {
+  } catch (error) {
     // Caching is an optimization; private browsing or a full store must not break clues.
+    logWarning('Could not write the Merriam-Webster cache; results will not persist.', { error });
   }
 };
 
@@ -31,7 +42,19 @@ const getCachedMerriamWebsterWords = word => {
   const cache = readMerriamWebsterCache();
   const entry = cache[word];
 
-  if (!entry || !Array.isArray(entry.words) || entry.expiresAt <= Date.now()) {
+  if (!entry) {
+    logInfo('Merriam-Webster cache miss.', { word });
+    return null;
+  }
+
+  if (!Array.isArray(entry.words) || entry.words.length === 0 || entry.expiresAt <= Date.now()) {
+    const reason = !Array.isArray(entry.words)
+      ? 'invalid entry'
+      : entry.words.length === 0
+        ? 'empty entry'
+        : 'expired entry';
+
+    logInfo('Merriam-Webster cache entry ignored.', { word, reason });
     if (entry) {
       delete cache[word];
       writeMerriamWebsterCache(cache);
@@ -41,6 +64,10 @@ const getCachedMerriamWebsterWords = word => {
 
   entry.lastAccessedAt = Date.now();
   writeMerriamWebsterCache(cache);
+  logInfo('Merriam-Webster cache hit; API request skipped.', {
+    word,
+    synonymCount: entry.words.length,
+  });
   return entry.words;
 };
 
@@ -156,6 +183,10 @@ const getMerriamWebsterWords = async (word, count) => {
   const apiKey = import.meta.env.VITE_MERRIAM_WEBSTER_API_KEY?.trim();
 
   if (!apiKey) {
+    logError('Merriam-Webster lookup stopped because no API key was found.', null, {
+      envVariable: 'VITE_MERRIAM_WEBSTER_API_KEY',
+      word,
+    });
     throw new Error('Merriam-Webster is not configured');
   }
 
@@ -168,19 +199,54 @@ const getMerriamWebsterWords = async (word, count) => {
 
   if (!merriamWebsterRequests.has(normalizedWord)) {
     const request = (async () => {
-      const response = await fetch(
-        `${MERRIAM_WEBSTER_URL}/${encodeURIComponent(normalizedWord)}?key=${encodeURIComponent(apiKey)}`,
-      );
+      logInfo('Starting Merriam-Webster API request.', {
+        word: normalizedWord,
+        apiKeyConfigured: true,
+        endpoint: `${MERRIAM_WEBSTER_URL}/${encodeURIComponent(normalizedWord)}`,
+      });
+
+      let response;
+      try {
+        response = await fetch(
+          `${MERRIAM_WEBSTER_URL}/${encodeURIComponent(normalizedWord)}?key=${encodeURIComponent(apiKey)}`,
+        );
+      } catch (error) {
+        logError('Merriam-Webster fetch failed before a response was received.', error, {
+          word: normalizedWord,
+          hint: 'Check the browser Network tab for CORS, DNS, or connectivity errors.',
+        });
+        throw error;
+      }
+
+      logInfo('Merriam-Webster API response received.', {
+        word: normalizedWord,
+        status: response.status,
+        ok: response.ok,
+      });
 
       if (!response.ok) {
+        logError('Merriam-Webster returned an unsuccessful HTTP status.', null, {
+          word: normalizedWord,
+          status: response.status,
+        });
         throw new Error(`Merriam-Webster request failed with status ${response.status}`);
       }
 
       const entries = await response.json();
 
       if (!Array.isArray(entries)) {
+        logWarning('Merriam-Webster returned an unexpected response shape.', {
+          word: normalizedWord,
+          responseType: typeof entries,
+        });
         return [];
       }
+
+      logInfo('Merriam-Webster response parsed.', {
+        word: normalizedWord,
+        entryCount: entries.length,
+        spellingSuggestionsOnly: entries.length > 0 && entries.every(entry => typeof entry === 'string'),
+      });
 
       const seen = new Set();
 
@@ -204,11 +270,26 @@ const getMerriamWebsterWords = async (word, count) => {
           return isUsable;
         });
 
-      cacheMerriamWebsterWords(normalizedWord, words);
+      if (words.length > 0) {
+        cacheMerriamWebsterWords(normalizedWord, words);
+      } else {
+        logWarning('No usable Merriam-Webster synonyms were found; result was not cached.', {
+          word: normalizedWord,
+          rawEntryCount: entries.length,
+        });
+      }
+
+      logInfo('Merriam-Webster lookup completed.', {
+        word: normalizedWord,
+        usableSynonymCount: words.length,
+        requestedCount: count,
+      });
       return words;
     })().finally(() => merriamWebsterRequests.delete(normalizedWord));
 
     merriamWebsterRequests.set(normalizedWord, request);
+  } else {
+    logInfo('Reusing an in-flight Merriam-Webster request.', { word: normalizedWord });
   }
 
   const words = await merriamWebsterRequests.get(normalizedWord);
@@ -216,13 +297,24 @@ const getMerriamWebsterWords = async (word, count) => {
 };
 
 export const getConfiguredSynonymProvider = () => {
-  const configuredProvider = import.meta.env.VITE_SYNONYM_PROVIDER?.toLowerCase();
-  return SUPPORTED_PROVIDERS.has(configuredProvider)
+  const configuredProvider = import.meta.env.VITE_SYNONYM_PROVIDER?.trim().toLowerCase();
+  const provider = SUPPORTED_PROVIDERS.has(configuredProvider)
     ? configuredProvider
     : DEFAULT_PROVIDER;
+
+  if (provider !== configuredProvider) {
+    logWarning('Configured synonym provider is missing or unsupported; using the default.', {
+      configuredProvider: configuredProvider || '(missing)',
+      provider,
+    });
+  }
+
+  return provider;
 };
 
 export const getClueWords = (word, count, provider = getConfiguredSynonymProvider()) => {
+  logInfo('Clue-word lookup requested.', { word, count, provider });
+
   if (provider === 'datamuse') {
     return getRankedDatamuseWords(word, count);
   }

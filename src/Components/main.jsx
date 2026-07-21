@@ -120,7 +120,12 @@ class Main extends Component {
         isLoading: false,
         statusMessage: 'Choose one or more clue words from each group.'
       });
-    }, () => {
+    }, error => {
+      console.error('[MovieGame synonyms] Could not generate clue words.', {
+        movieName,
+        provider: import.meta.env.VITE_SYNONYM_PROVIDER || '(not configured)',
+        error,
+      });
       this.setState({
         synonyms: [],
         selectedClues: [],
