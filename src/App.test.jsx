@@ -6,6 +6,7 @@ import App from './App.jsx';
 
 afterEach(() => {
   vi.restoreAllMocks();
+  window.localStorage.clear();
 });
 
 it('renders without crashing', () => {
@@ -72,5 +73,37 @@ it('groups clue words and lets the user choose them', async () => {
 
   act(() => {
     root.unmount();
+  });
+});
+
+it('restores scores from local storage after remounting', () => {
+  const firstContainer = document.createElement('div');
+  const firstRoot = createRoot(firstContainer);
+
+  act(() => {
+    firstRoot.render(<App />);
+  });
+
+  act(() => {
+    firstContainer.querySelector('button[aria-label="Award point"]').dispatchEvent(new MouseEvent('click', { bubbles: true }));
+  });
+
+  expect(window.localStorage.getItem('movieGame.scores')).toBe('[1,0]');
+
+  act(() => {
+    firstRoot.unmount();
+  });
+
+  const refreshedContainer = document.createElement('div');
+  const refreshedRoot = createRoot(refreshedContainer);
+
+  act(() => {
+    refreshedRoot.render(<App />);
+  });
+
+  expect(refreshedContainer.querySelector('.score-toggle').textContent).toBe('1 - 0');
+
+  act(() => {
+    refreshedRoot.unmount();
   });
 });
