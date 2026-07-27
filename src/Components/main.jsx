@@ -76,6 +76,31 @@ const MOVIE_TITLES = [
   'Alien Romulus',
 ];
 
+const SCORE_STORAGE_KEY = 'movieGame.scores';
+const DEFAULT_TEAMS = [
+  { name: 'Team One', score: 0 },
+  { name: 'Team Two', score: 0 },
+];
+
+const getSavedTeams = () => {
+  try {
+    const savedScores = JSON.parse(window.localStorage.getItem(SCORE_STORAGE_KEY));
+
+    if (!Array.isArray(savedScores) || savedScores.length !== DEFAULT_TEAMS.length) {
+      return DEFAULT_TEAMS;
+    }
+
+    return DEFAULT_TEAMS.map((team, index) => ({
+      ...team,
+      score: Number.isInteger(savedScores[index]) && savedScores[index] >= 0
+        ? savedScores[index]
+        : 0,
+    }));
+  } catch {
+    return DEFAULT_TEAMS;
+  }
+};
+
 const getRandomMovieTitle = (excludedTitle = '') => {
   const availableTitles = MOVIE_TITLES.filter(title => title !== excludedTitle);
   return availableTitles[Math.floor(Math.random() * availableTitles.length)] || MOVIE_TITLES[0];
@@ -92,10 +117,7 @@ class Main extends Component {
       synonyms_count: 5,
       isLoading: false,
       statusMessage: 'Enter a Movie Name, then press Enter or tap Search.',
-      teams: [
-        { name: 'Team One', score: 0 },
-        { name: 'Team Two', score: 0 },
-      ],
+      teams: getSavedTeams(),
       activeTeam: 0,
       roundSeconds: 120,
       secondsRemaining: 120,
@@ -104,6 +126,19 @@ class Main extends Component {
       skip_words: [
         'in', 'on', 'of', 'where', 'when', 'the', 'a', 'an', 'for', 'to'
       ]
+    }
+  }
+
+  componentDidUpdate(previousProps, previousState) {
+    if (previousState.teams !== this.state.teams) {
+      try {
+        window.localStorage.setItem(
+          SCORE_STORAGE_KEY,
+          JSON.stringify(this.state.teams.map(team => team.score)),
+        );
+      } catch {
+        // Keep the game usable when browser storage is unavailable.
+      }
     }
   }
 
